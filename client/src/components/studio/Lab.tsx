@@ -3,6 +3,7 @@ import Renderer from './Renderer';
 import ProfessionalMixerConsole from './ProfessionalMixerConsole';
 import { StudioState, EquipmentNode } from '../../../../shared/equipment-types';
 import { equipmentLibrary } from '../../lib/equipment-library';
+import { audioEngine } from '../../lib/audio-engine-v2';
 
 const Lab: React.FC = () => {
   const [state, setState] = useState<StudioState>({
@@ -12,18 +13,27 @@ const Lab: React.FC = () => {
   });
   const [zoom, setZoom] = useState(1);
 
-  const addGear = (defId: string) => {
+  const addGear = async (defId: string) => {
+    // Resume/Start Audio Engine on first interaction
+    await audioEngine.start();
+
     const def = equipmentLibrary.find(d => d.id === defId);
     if (!def) return;
     
+    const nodeId = `node-${Date.now()}`;
     const newNode: EquipmentNode = {
-      id: `node-${Date.now()}`,
+      id: nodeId,
       defId,
       x: 100,
       y: 100,
       rotation: 0,
       state: {}
     };
+
+    // Create corresponding audio node if it's a source
+    if (def.category === 'source') {
+      audioEngine.createSourceNode(nodeId, 'sine');
+    }
     
     setState(prev => ({ ...prev, nodes: [...prev.nodes, newNode], selectedNodeId: newNode.id }));
   };

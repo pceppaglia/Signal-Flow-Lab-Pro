@@ -37,7 +37,10 @@ class AudioEngineV2 {
   get analyserNode() { return this.masterAnalyser; }
 
   async start(): Promise<void> {
-    if (this._isRunning) return;
+    if (this._isRunning) {
+      if (this.ctx?.state === 'suspended') await this.ctx.resume();
+      return;
+    }
 
     this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
 
@@ -54,9 +57,9 @@ class AudioEngineV2 {
     this.masterAnalyser.fftSize = 2048;
     this.masterAnalyser.smoothingTimeConstant = 0.8;
 
-    // Output gate (mute until signal path is complete)
+    // Output gate (Open by default now)
     this.outputGate = this.ctx.createGain();
-    this.outputGate.gain.value = 0;
+    this.outputGate.gain.value = 1.0;
 
     // Create aux busses (4 aux sends)
     for (let i = 1; i <= 4; i++) {
@@ -184,6 +187,18 @@ class AudioEngineV2 {
     }
 
     this.nodeRegistry.delete(nodeId);
+  }
+
+  /**
+   * Bridge to connect two audio nodes in the registry
+   */
+  connectNodes(fromId: string, toId: string) {
+    const fromNode = this.nodeRegistry.get(fromId);
+    const toNode = this.nodeRegistry.get(toId);
+    
+    if (fromNode && toNode && this.ctx) {
+      fromNode.gainNode.connect(toNode.gainNode);
+    }
   }
 
   /**

@@ -22,6 +22,7 @@ const Renderer: React.FC<RendererProps> = ({ state, onSelectNode, onUpdateNode, 
     let frameId: number;
     const render = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.save();
       ctx.scale(zoom, zoom);
 
       // --- 1. DRAW STUDIO GRID/FLOOR ---
@@ -55,13 +56,34 @@ const Renderer: React.FC<RendererProps> = ({ state, onSelectNode, onUpdateNode, 
         });
       });
 
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.restore();
       frameId = requestAnimationFrame(render);
     };
 
     render();
     return () => cancelAnimationFrame(frameId);
   }, [state, zoom]);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / zoom;
+    const y = (e.clientY - rect.top) / zoom;
+
+    // Detect click on equipment nodes
+    const clickedNode = state.nodes.find(node => {
+      const def = equipmentLibrary.find(d => d.id === node.defId);
+      if (!def) return false;
+      const h = def.heightUnits > 0 ? def.heightUnits * 44 : 100;
+      return x >= node.x && x <= node.x + def.width &&
+             y >= node.y && y <= node.y + h;
+    });
+
+    if (clickedNode) {
+      onSelectNode(clickedNode.id);
+    }
+  };
 
   const drawCable = (ctx: CanvasRenderingContext2D, conn: Connection, state: StudioState) => {
     const fromNode = state.nodes.find(n => n.id === conn.fromNodeId);
@@ -96,7 +118,15 @@ const Renderer: React.FC<RendererProps> = ({ state, onSelectNode, onUpdateNode, 
     ctx.shadowBlur = 0;
   };
 
-  return <canvas ref={canvasRef} width={window.innerWidth} height={window.innerHeight} className="bg-[#121212] cursor-crosshair" />;
+  return (
+    <canvas 
+      ref={canvasRef} 
+      onMouseDown={handleMouseDown}
+      width={window.innerWidth} 
+      height={window.innerHeight} 
+      className="bg-[#121212] cursor-crosshair" 
+    />
+  );
 };
 
 export default Renderer;
