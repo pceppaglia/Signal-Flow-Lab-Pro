@@ -4,6 +4,7 @@
  * FIXES: Resolves 'suspended' context blocker and 'silent' output gate.
  * ADDS: Support for modular hardware patching (Input/Output Nodes).
  */
+import { equipmentLibrary } from './equipment-library';
 
 export interface AudioNodeInstance {
   id: string;
@@ -36,6 +37,11 @@ class AudioEngineV2 {
   private animFrameId: number | null = null;
   private _isRunning = false;
   private noiseBuffer: AudioBuffer | null = null;
+  private nodeProfiles: Map<
+    string,
+    { defId: string; state: Record<string, unknown> }
+  > = new Map();
+  private micToPreampLinks: Map<string, Set<string>> = new Map();
 
   get isRunning() { return this._isRunning; }
   get audioContext() { return this.ctx; }
@@ -102,6 +108,8 @@ class AudioEngineV2 {
     });
 
     this.nodeRegistry.clear();
+    this.nodeProfiles.clear();
+    this.micToPreampLinks.clear();
     this.auxBusses.clear();
     this.auxReturns.clear();
 
@@ -267,6 +275,9 @@ class AudioEngineV2 {
     }
     
     this.nodeRegistry.delete(nodeId);
+    this.nodeProfiles.delete(nodeId);
+    this.micToPreampLinks.delete(nodeId);
+    this.micToPreampLinks.forEach((preampIds) => preampIds.delete(nodeId));
   }
 
   /**
@@ -285,6 +296,27 @@ class AudioEngineV2 {
         // Already disconnected or not connected to master
       }
       from.outputNode.connect(to.inputNode);
+      this.trackMicToPreampConnection(fromId, toId);
+      this.applyMicPhantomRule(fromId, toId);
+    }
+  }
+
+  registerNodeProfile(
+    nodeId: string,
+    defId: string,
+    state: Record<string, unknown> = {}
+  ): void {
+    this.nodeProfiles.set(nodeId, { defId, state: { ...state } });
+  }
+
+  updateNodeState(nodeId: string, key: string, value: unknown): void {
+    const profile = this.nodeProfiles.get(nodeId);
+    if (!profile) return;
+    profile.state = { ...profile.state, [key]: value };
+    this.nodeProfiles.set(nodeId, profile);
+
+    if (key === 'phantom') {
+      this.refreshLinkedMicrophonesForPreamp(nodeId);
     }
   }
 
@@ -443,6 +475,51 @@ class AudioEngineV2 {
       curve[i] = ((3 + amount) * x * 20 * deg) / (Math.PI + amount * Math.abs(x));
     }
     return curve;
+  }
+
+  private trackMicToPreampConnection(fromId: string, toId: string): void {
+    const fromProfile = this.nodeProfiles.get(fromId);
+    const toProfile = this.nodeProfiles.get(toId);
+    if (!fromProfile || !toProfile) return;
+
+    const fromDef = equipmentLibrary.find((def) => def.id === fromProfile.defId);
+    const toDef = equipmentLibrary.find((def) => def.id === toProfile.defId);
+    if (!fromDef || !toDef) return;
+    if (fromDef.category !== 'microphone' || toDef.category !== 'preamp') return;
+
+    const links = this.micToPreampLinks.get(fromId) ?? new Set<string>();
+    links.add(toId);
+    this.micToPreampLinks.set(fromId, links);
+  }
+
+  private applyMicPhantomRule(fromId: string, toId: string): void {
+    const toProfile = this.nodeProfiles.get(toId);
+    if (!toProfile) return;
+
+    const toDef = equipmentLibrary.find((def) => def.id === toProfile.defId);
+    if (!toDef) return;
+
+    if (!this.isCondenserMic(fromId) || toDef.category !== 'preamp') return;
+
+    const phantomEnabled = toProfile.state.phantom === true;
+    this.setNodeGain(fromId, phantomEnabled ? 1 : 0);
+  }
+
+  private isCondenserMic(nodeId: string): boolean {
+    const profile = this.nodeProfiles.get(nodeId);
+    if (!profile) return false;
+    const def = equipmentLibrary.find((d) => d.id === profile.defId);
+    return (
+      def?.category === 'microphone' && def.microphoneType === 'condenser'
+    );
+  }
+
+  private refreshLinkedMicrophonesForPreamp(preampId: string): void {
+    this.micToPreampLinks.forEach((preampIds, micId) => {
+      if (preampIds.has(preampId)) {
+        this.applyMicPhantomRule(micId, preampId);
+      }
+    });
   }
 }
 

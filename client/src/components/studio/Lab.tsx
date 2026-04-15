@@ -108,6 +108,7 @@ const Lab: React.FC = () => {
     } else {
       audioEngine.ensurePatchNode(nodeId);
     }
+    audioEngine.registerNodeProfile(nodeId, defId, newNode.state);
 
     setState((prev) => ({
       ...prev,
@@ -172,6 +173,7 @@ const Lab: React.FC = () => {
           ),
         };
       });
+      audioEngine.updateNodeState(nodeId, controlId, value);
     },
     []
   );
@@ -280,6 +282,7 @@ const Lab: React.FC = () => {
           : n
       ),
     }));
+    audioEngine.updateNodeState(state.selectedNodeId, key, value);
   }, [state.selectedNodeId]);
 
   const onRemoveNode = useCallback(() => {
@@ -312,6 +315,7 @@ const Lab: React.FC = () => {
         <div className="relative min-h-0 min-w-0 flex-1">
           <Renderer
             state={state}
+            deskNode={deskNode}
             zoom={zoom}
             onSelectNode={(id) =>
               setState((prev) => ({ ...prev, selectedNodeId: id }))

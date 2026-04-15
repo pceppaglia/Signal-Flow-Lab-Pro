@@ -21,6 +21,8 @@ export interface EquipmentDef {
   width: number;
   heightUnits: number; // Vertical Rack Units (1U = 44px). 0 for floor gear.
   accentColor: string;
+  /** Present when `category === 'microphone'`. */
+  microphoneType?: 'dynamic' | 'condenser' | 'ribbon';
   inputs: Array<{ id: string; label: string; type: SignalLevel; position: number }>;
   outputs: Array<{ id: string; label: string; type: SignalLevel; position: number }>;
   hasPhantom?: boolean;
@@ -360,11 +362,11 @@ export const equipmentLibrary: EquipmentDef[] = [
   },
 
   // --- MICROPHONES ---
-  { id: 'shure-sm57', name: 'SM57 Dynamic', brand: 'Shure', model: 'SM57', category: 'microphone', description: 'Snare/Amp workhorse.', width: 40, heightUnits: 0, accentColor: '#333333', inputs: [], outputs: [{ id: 'xlr', label: 'XLR', type: 'mic', position: 0.9 }], controls: [] },
-  { id: 'shure-sm58', name: 'SM58 Dynamic', brand: 'Shure', model: 'SM58', category: 'microphone', description: 'Vocal standard.', width: 50, heightUnits: 0, accentColor: '#444444', inputs: [], outputs: [{ id: 'xlr', label: 'XLR', type: 'mic', position: 0.9 }], controls: [] },
-  { id: 'u87', name: 'U87 Condenser', brand: 'Neumann', model: 'U-87 Ai', category: 'microphone', description: 'Elite studio condenser.', width: 60, heightUnits: 0, accentColor: '#9ca3af', inputs: [], outputs: [{ id: 'xlr', label: 'XLR', type: 'mic', position: 0.9 }], controls: [] },
-  { id: 'akg-c414', name: 'C414 Condenser', brand: 'AKG', model: 'C-414 XLII', category: 'microphone', description: 'Versatile instrument mic.', width: 50, heightUnits: 0, accentColor: '#222222', inputs: [], outputs: [{ id: 'xlr', label: 'XLR', type: 'mic', position: 0.9 }], controls: [] },
-  { id: 'royer-r121', name: 'R-121 Ribbon', brand: 'Royer', model: 'R-121', category: 'microphone', description: 'Smooth ribbon mic.', width: 30, heightUnits: 0, accentColor: '#111111', inputs: [], outputs: [{ id: 'xlr', label: 'XLR', type: 'mic', position: 0.9 }], controls: [] },
+  { id: 'shure-sm57', name: 'SM57 Dynamic', brand: 'Shure', model: 'SM57', category: 'microphone', microphoneType: 'dynamic', description: 'Snare/Amp workhorse.', width: 40, heightUnits: 0, accentColor: '#333333', inputs: [], outputs: [{ id: 'xlr', label: 'XLR', type: 'mic', position: 0.9 }], controls: [] },
+  { id: 'shure-sm58', name: 'SM58 Dynamic', brand: 'Shure', model: 'SM58', category: 'microphone', microphoneType: 'dynamic', description: 'Vocal standard.', width: 50, heightUnits: 0, accentColor: '#444444', inputs: [], outputs: [{ id: 'xlr', label: 'XLR', type: 'mic', position: 0.9 }], controls: [] },
+  { id: 'u87', name: 'U87 Condenser', brand: 'Neumann', model: 'U-87 Ai', category: 'microphone', microphoneType: 'condenser', description: 'Elite studio condenser.', width: 60, heightUnits: 0, accentColor: '#9ca3af', inputs: [], outputs: [{ id: 'xlr', label: 'XLR', type: 'mic', position: 0.9 }], controls: [] },
+  { id: 'akg-c414', name: 'C414 Condenser', brand: 'AKG', model: 'C-414 XLII', category: 'microphone', microphoneType: 'condenser', description: 'Versatile instrument mic.', width: 50, heightUnits: 0, accentColor: '#222222', inputs: [], outputs: [{ id: 'xlr', label: 'XLR', type: 'mic', position: 0.9 }], controls: [] },
+  { id: 'royer-r121', name: 'R-121 Ribbon', brand: 'Royer', model: 'R-121', category: 'microphone', microphoneType: 'ribbon', description: 'Smooth ribbon mic.', width: 30, heightUnits: 0, accentColor: '#111111', inputs: [], outputs: [{ id: 'xlr', label: 'XLR', type: 'mic', position: 0.9 }], controls: [] },
 
   // --- CONSOLES ---
   {

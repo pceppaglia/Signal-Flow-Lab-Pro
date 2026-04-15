@@ -1018,11 +1018,12 @@ export function hitTestAnyPort(
   wx: number,
   wy: number,
   node: EquipmentNode,
-  def: EquipmentDef
+  def: EquipmentDef,
+  deskNode?: { x: number; y: number; width: number; height: number }
 ): PortPick | null {
-  const hh = def.heightUnits > 0 ? def.heightUnits * 44 : 100;
-  const nx = node.x;
-  const ny = node.y;
+  const hh = deskNode?.height ?? (def.heightUnits > 0 ? def.heightUnits * 44 : 100);
+  const nx = deskNode?.x ?? node.x;
+  const ny = deskNode?.y ?? node.y;
 
   if (
     def.inputs.length > 0 &&
