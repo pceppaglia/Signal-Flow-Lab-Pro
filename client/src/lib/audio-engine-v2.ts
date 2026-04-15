@@ -5,6 +5,10 @@
  * ADDS: Support for modular hardware patching (Input/Output Nodes).
  */
 import { equipmentLibrary } from './equipment-library';
+import {
+  FoundationalMixerRuntime,
+  FOUNDATIONAL_MIXER_CH_PREFIX,
+} from './foundational-mixer-graph';
 
 export interface AudioNodeInstance {
   id: string;
@@ -48,6 +52,7 @@ class AudioEngineV2 {
   private micToPreampLinks: Map<string, Set<string>> = new Map();
   private meterBuffers: Map<string, Float32Array> = new Map();
   private autoResumeBound = false;
+  private foundationalMixer: FoundationalMixerRuntime | null = null;
 
   get isRunning() { return this._isRunning; }
   get audioContext() { return this.ctx; }
@@ -79,14 +84,17 @@ class AudioEngineV2 {
     }
     this.bindAutoResumeOnFirstGesture();
 
-    // --- BROWSER SECURITY FIX ---
-    // Modern browsers require an explicit resume() call triggered by a user event.
-    if (this.ctx.state === 'suspended') {
+    // Always attempt resume: running contexts no-op; suspended contexts need an explicit resume
+    // (often after tab backgrounding or after suspendOutputWithRampDown).
+    try {
       await this.ctx.resume();
+    } catch (e) {
+      console.warn('AudioContext.resume failed:', e);
     }
 
     this.ensureMasterChain();
     this.connectMasterOutputToDestination();
+    this.ensureFoundationalMixer();
 
     if (this._isRunning && this.ctx.state === 'running') {
       return;
@@ -128,6 +136,8 @@ class AudioEngineV2 {
     this.micToPreampLinks.clear();
     this.auxBusses.clear();
     this.auxReturns.clear();
+    this.foundationalMixer?.dispose();
+    this.foundationalMixer = null;
 
     try {
       this.ctx.close();
@@ -140,8 +150,77 @@ class AudioEngineV2 {
     this.masterAnalyser = null;
     this.clipper = null;
     this.outputGate = null;
+    this.foundationalMixer = null;
     this._isRunning = false;
     this.notifyListeners();
+  }
+
+  /** Builds docked Foundational Mixer graph + patchable channel inputs (24). */
+  ensureFoundationalMixer(): FoundationalMixerRuntime | null {
+    if (!this.ctx || !this.masterGain) return null;
+    if (this.foundationalMixer) return this.foundationalMixer;
+
+    this.foundationalMixer = new FoundationalMixerRuntime(
+      this.ctx,
+      this.masterGain,
+      this.auxBusses,
+      this.auxReturns
+    );
+
+    for (let i = 1; i <= 24; i += 1) {
+      const ch = this.foundationalMixer.channels[i - 1];
+      if (!ch) continue;
+      const id = `${FOUNDATIONAL_MIXER_CH_PREFIX}${i}`;
+      this.nodeRegistry.set(id, {
+        id,
+        inputNode: ch.inputGain,
+        outputNode: ch.inputGain,
+        gainNode: ch.trimGain,
+        analyser: ch.meterAnalyser,
+      });
+      this.registerNodeProfile(id, 'foundational-mixer-channel', {});
+    }
+
+    return this.foundationalMixer;
+  }
+
+  getFoundationalMixer(): FoundationalMixerRuntime | null {
+    return this.foundationalMixer;
+  }
+
+  setFoundationalMixerChannelCount(count: number): void {
+    this.foundationalMixer?.setActiveChannelCount(count);
+  }
+
+  setFoundationalMixerChannelParam(
+    channelIndex1: number,
+    key: string,
+    value: number | boolean | string
+  ): void {
+    this.foundationalMixer?.setChannelParam(channelIndex1, key, value);
+  }
+
+  setFoundationalMixerSubgroupParam(
+    subIdx0: number,
+    key: string,
+    value: number | boolean
+  ): void {
+    this.foundationalMixer?.setSubgroupParam(subIdx0, key, value);
+  }
+
+  setFoundationalMixerMasterParam(
+    key: string,
+    value: number | boolean | string
+  ): void {
+    this.foundationalMixer?.setMasterParam(key, value);
+  }
+
+  getFoundationalMixerChannelMeter(channelIndex1: number): number {
+    return this.foundationalMixer?.getChannelMeter(channelIndex1) ?? 0;
+  }
+
+  getFoundationalMixerSubgroupMeter(subIdx0: number): number {
+    return this.foundationalMixer?.getSubgroupMeter(subIdx0) ?? 0;
   }
 
   /** Builds the internal master bus once; idempotent. */
@@ -183,9 +262,10 @@ class AudioEngineV2 {
   private connectMasterOutputToDestination(): void {
     if (!this.ctx || !this.outputGate) return;
     try {
-      this.outputGate.disconnect(this.ctx.destination);
+      // Disconnect all outgoing connections, then attach destination once (reliable across browsers).
+      this.outputGate.disconnect();
     } catch {
-      // not linked to destination
+      // ignore
     }
     this.outputGate.connect(this.ctx.destination);
   }
@@ -226,6 +306,11 @@ class AudioEngineV2 {
   createNode(nodeId: string, defId: string): AudioNodeInstance | null {
     const def = equipmentLibrary.find((d) => d.id === defId);
     if (!def) return null;
+
+    if (defId === 'foundational-mixer-channel') {
+      this.ensureFoundationalMixer();
+      return this.nodeRegistry.get(nodeId) ?? null;
+    }
 
     if (def.category === 'signal-gen') {
       return this.createSourceNode(nodeId, 'sine');
@@ -362,8 +447,18 @@ class AudioEngineV2 {
    * RESTORED: Optional chaining used for clean, safe cleanup.
    */
   disconnectNode(nodeId: string): void {
+    if (nodeId.startsWith(FOUNDATIONAL_MIXER_CH_PREFIX)) {
+      return;
+    }
     const node = this.nodeRegistry.get(nodeId);
     if (!node) return;
+
+    const micsToRefresh: string[] = [];
+    this.micToPreampLinks.forEach((preampIds, micId) => {
+      if (preampIds.delete(nodeId)) {
+        micsToRefresh.push(micId);
+      }
+    });
 
     try {
       node.oscillator?.stop();
@@ -386,6 +481,8 @@ class AudioEngineV2 {
     this.meterBuffers.delete(nodeId);
     this.micToPreampLinks.delete(nodeId);
     this.micToPreampLinks.forEach((preampIds) => preampIds.delete(nodeId));
+
+    micsToRefresh.forEach((id) => this.refreshCondenserPhantomGate(id));
   }
 
   /**
@@ -414,7 +511,7 @@ class AudioEngineV2 {
         from.outputNode.connect(this.masterGain!);
       }
       this.trackMicToPreampConnection(fromId, toId);
-      this.applyMicPhantomRule(fromId, toId);
+      this.refreshCondenserPhantomGate(fromId);
     }
   }
 
@@ -427,6 +524,7 @@ class AudioEngineV2 {
     }>
   ): void {
     if (!this.masterGain) return;
+    this.micToPreampLinks.clear();
     const nodeIds = new Set(this.nodeRegistry.keys());
 
     nodeIds.forEach((id) => {
@@ -463,7 +561,10 @@ class AudioEngineV2 {
         from.outputNode.connect(this.masterGain!);
       }
       this.trackMicToPreampConnection(link.fromNodeId, link.toNodeId);
-      this.applyMicPhantomRule(link.fromNodeId, link.toNodeId);
+    });
+
+    this.micToPreampLinks.forEach((_, micId) => {
+      this.refreshCondenserPhantomGate(micId);
     });
   }
 
@@ -484,6 +585,35 @@ class AudioEngineV2 {
     if (key === 'phantom' || key === 'phantomPower') {
       this.refreshLinkedMicrophonesForPreamp(nodeId);
     }
+  }
+
+  /**
+   * Condenser mics into a preamp are muted at the mic gain stage unless +48V is on
+   * (dynamic / ribbon mics are unaffected).
+   */
+  private refreshCondenserPhantomGate(micId: string): void {
+    if (!this.isCondenserMic(micId)) {
+      this.setNodeGain(micId, 1);
+      return;
+    }
+    const preamps = this.micToPreampLinks.get(micId);
+    if (!preamps || preamps.size === 0) {
+      this.setNodeGain(micId, 1);
+      return;
+    }
+    let phantomOk = false;
+    for (const preId of preamps) {
+      const prof = this.nodeProfiles.get(preId);
+      if (!prof) continue;
+      const def = equipmentLibrary.find((d) => d.id === prof.defId);
+      if (def?.category !== 'preamp') continue;
+      const on = prof.state.phantomPower === true || prof.state.phantom === true;
+      if (on) {
+        phantomOk = true;
+        break;
+      }
+    }
+    this.setNodeGain(micId, phantomOk ? 1 : 0);
   }
 
   // --- HARDWARE PARAMETER CONTROLS ---
@@ -582,6 +712,12 @@ class AudioEngineV2 {
   }
 
   getMeterLevel(nodeId: string): number {
+    if (nodeId.startsWith(FOUNDATIONAL_MIXER_CH_PREFIX)) {
+      const n = parseInt(nodeId.slice(FOUNDATIONAL_MIXER_CH_PREFIX.length), 10);
+      if (n >= 1 && n <= 24) {
+        return this.getFoundationalMixerChannelMeter(n);
+      }
+    }
     const node = this.nodeRegistry.get(nodeId);
     if (!node?.analyser) return 0;
     const analyser = node.analyser;
@@ -724,20 +860,6 @@ class AudioEngineV2 {
     this.micToPreampLinks.set(fromId, links);
   }
 
-  private applyMicPhantomRule(fromId: string, toId: string): void {
-    const toProfile = this.nodeProfiles.get(toId);
-    if (!toProfile) return;
-
-    const toDef = equipmentLibrary.find((def) => def.id === toProfile.defId);
-    if (!toDef) return;
-
-    if (toDef.category !== 'preamp') return;
-
-    const phantomEnabled =
-      toProfile.state.phantomPower === true || toProfile.state.phantom === true;
-    this.setNodeGain(fromId, phantomEnabled ? 1 : 0);
-  }
-
   private canPassConnection(
     fromId: string,
     toId: string,
@@ -754,9 +876,6 @@ class AudioEngineV2 {
     const fromPort = fromDef.outputs.find((p) => p.id === fromPortId);
     const toPort = toDef.inputs.find((p) => p.id === toPortId);
     if (!fromPort || !toPort) return true;
-    if (fromPort.type === 'mic' && toPort.type === 'mic' && toDef.category === 'preamp') {
-      return toProfile.state.phantomPower === true || toProfile.state.phantom === true;
-    }
     return true;
   }
 
@@ -772,7 +891,7 @@ class AudioEngineV2 {
   private refreshLinkedMicrophonesForPreamp(preampId: string): void {
     this.micToPreampLinks.forEach((preampIds, micId) => {
       if (preampIds.has(preampId)) {
-        this.applyMicPhantomRule(micId, preampId);
+        this.refreshCondenserPhantomGate(micId);
       }
     });
   }

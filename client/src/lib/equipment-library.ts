@@ -6,6 +6,9 @@
 
 export type SignalLevel = 'mic' | 'line' | 'speaker' | 'digital';
 
+/** Standard faceplate width for rack-mount modules (matches `RACK_WIDTH_PX` bay). */
+export const STANDARD_RACK_FACE_WIDTH = 600;
+
 export type EquipmentCategory = 
   | 'source' | 'microphone' | 'preamp' | 'compressor' | 'eq' 
   | 'reverb' | 'delay' | 'effects' | 'monitor' | 'interface' 
@@ -41,6 +44,10 @@ export interface EquipmentDef {
     tooltip?: string;
     step?: number;
     unit?: string;
+    /** 0–1 horizontal position on the face (inner bay between rack ears when wide). */
+    relX?: number;
+    /** 0–1 vertical position on the unit (0 = top). */
+    relY?: number;
   }>;
 }
 
@@ -54,6 +61,21 @@ const genPorts = (count: number, prefix: string, type: SignalLevel = 'line') =>
   }));
 
 export const equipmentLibrary: EquipmentDef[] = [
+  {
+    id: 'foundational-mixer-channel',
+    name: 'Mixer Channel Input',
+    brand: 'Foundational',
+    model: 'FMIX',
+    category: 'interface',
+    description:
+      'Patch destination for the docked Foundational Mixer (one instance per channel id).',
+    width: 40,
+    heightUnits: 0,
+    accentColor: '#5c6b7a',
+    inputs: [{ id: 'in', label: 'IN', type: 'line', position: 0.5 }],
+    outputs: [],
+    controls: [],
+  },
   {
     id: 'kick-drum-src',
     name: 'Live Kick Drum',
@@ -123,6 +145,8 @@ export const equipmentLibrary: EquipmentDef[] = [
         min: 20,
         max: 20000,
         unit: 'Hz',
+        relX: 0.22,
+        relY: 0.55,
       },
       {
         id: 'level',
@@ -132,6 +156,8 @@ export const equipmentLibrary: EquipmentDef[] = [
         min: -60,
         max: 0,
         unit: 'dB',
+        relX: 0.48,
+        relY: 0.55,
       },
       {
         id: 'waveform',
@@ -143,6 +169,8 @@ export const equipmentLibrary: EquipmentDef[] = [
           { label: 'Square', value: 'square' },
           { label: 'Noise', value: 'noise' },
         ],
+        relX: 0.74,
+        relY: 0.55,
       },
     ],
   },
@@ -162,12 +190,11 @@ export const equipmentLibrary: EquipmentDef[] = [
     hasPhantom: true,
     hasInsert: true,
     controls: [
-      { id: 'gain', label: 'GAIN', type: 'knob', default: 40, min: 20, max: 80, color: '#d91e1e' },
-      { id: 'high-shelf', label: 'HIGH', type: 'knob', default: 0, min: -15, max: 15 },
-      { id: 'mid-freq', label: 'MID', type: 'knob', default: 1.6, min: 0.36, max: 7.2 },
-      { id: 'low-shelf', label: 'LOW', type: 'knob', default: 0, min: -15, max: 15, color: '#333' },
-      { id: 'phantom', label: '48V', type: 'switch', default: false },
-      { id: 'phantomPower', label: '+48V', type: 'button', default: false }
+      { id: 'gain', label: 'GAIN', type: 'knob', default: 40, min: 20, max: 80, color: '#d91e1e', relX: 0.09, relY: 0.5 },
+      { id: 'high-shelf', label: 'HIGH', type: 'knob', default: 0, min: -15, max: 15, relX: 0.28, relY: 0.5 },
+      { id: 'mid-freq', label: 'MID', type: 'knob', default: 1.6, min: 0.36, max: 7.2, relX: 0.44, relY: 0.5 },
+      { id: 'low-shelf', label: 'LOW', type: 'knob', default: 0, min: -15, max: 15, color: '#333', relX: 0.6, relY: 0.5 },
+      { id: 'phantom', label: '48V', type: 'switch', default: false, relX: 0.88, relY: 0.5 },
     ]
   },
   {
@@ -184,9 +211,9 @@ export const equipmentLibrary: EquipmentDef[] = [
     outputs: [{ id: 'line-out', label: 'OUT', type: 'line', position: 0.5 }],
     hasPhantom: true,
     controls: [
-      { id: 'gain', label: 'GAIN', type: 'knob', default: 35, min: 0, max: 65, color: '#0054a6' },
-      { id: 'pad', label: 'PAD', type: 'button', default: false },
-      { id: 'phantom', label: '48V', type: 'button', default: false }
+      { id: 'gain', label: 'GAIN', type: 'knob', default: 35, min: 0, max: 65, color: '#0054a6', relX: 0.38, relY: 0.64 },
+      { id: 'pad', label: 'PAD', type: 'button', default: false, relX: 0.5, relY: 0.64 },
+      { id: 'phantom', label: '48V', type: 'button', default: false, relX: 0.62, relY: 0.64 },
     ]
   },
   {
@@ -511,20 +538,21 @@ export const equipmentLibrary: EquipmentDef[] = [
     brand: 'SignalFlow',
     model: 'PMC-32',
     category: 'console',
-    description: 'Large-format inline mixer with meter bridge and integrated monitoring section.',
-    width: 1200,
-    heightUnits: 14,
+    description:
+      'Modular 600mm inline console: 12U rack centerpiece; patch line-level sources to channel inputs and mains to the room.',
+    width: 600,
+    heightUnits: 12,
     accentColor: '#2d2d2d',
     inputs: [
-      { id: 'ch-in-1', label: 'CH1', type: 'line', position: 0.12 },
-      { id: 'ch-in-2', label: 'CH2', type: 'line', position: 0.24 },
-      { id: 'ch-in-3', label: 'CH3', type: 'line', position: 0.36 },
-      { id: 'ch-in-4', label: 'CH4', type: 'line', position: 0.48 },
-      { id: 'ch-in-5', label: 'CH5', type: 'line', position: 0.6 },
+      { id: 'ch-in-1', label: 'CH1', type: 'line', position: 0.1 },
+      { id: 'ch-in-2', label: 'CH2', type: 'line', position: 0.22 },
+      { id: 'ch-in-3', label: 'CH3', type: 'line', position: 0.34 },
+      { id: 'ch-in-4', label: 'CH4', type: 'line', position: 0.46 },
+      { id: 'ch-in-5', label: 'CH5', type: 'line', position: 0.58 },
     ],
     outputs: [
-      { id: 'main-out-l', label: 'L', type: 'line', position: 0.78 },
-      { id: 'main-out-r', label: 'R', type: 'line', position: 0.88 },
+      { id: 'main-out-l', label: 'L', type: 'line', position: 0.74 },
+      { id: 'main-out-r', label: 'R', type: 'line', position: 0.86 },
     ],
     controls: [
       { id: 'ch-1-fader', label: 'CH1', type: 'fader', default: 72, min: 0, max: 100 },
@@ -556,7 +584,7 @@ export const equipmentLibrary: EquipmentDef[] = [
     model: 'VX-1604',
     category: 'console',
     description: 'Compact 16-channel utility mixer.',
-    width: 800,
+    width: 600,
     heightUnits: 12,
     accentColor: '#222222',
     inputs: genPorts(16, 'ch-in', 'line'),
@@ -572,7 +600,7 @@ export const equipmentLibrary: EquipmentDef[] = [
     model: 'Pearl',
     category: 'console',
     description: 'High-end analog recording console.',
-    width: 1200,
+    width: 600,
     heightUnits: 18,
     accentColor: '#3d4449',
     inputs: genPorts(24, 'ch-in', 'mic'),
@@ -586,7 +614,7 @@ export const equipmentLibrary: EquipmentDef[] = [
     model: '4000-G',
     category: 'console',
     description: 'The definitive rock and pop mixing console.',
-    width: 1400,
+    width: 600,
     heightUnits: 20,
     accentColor: '#444444',
     inputs: genPorts(32, 'ch-in', 'mic'),
@@ -594,6 +622,63 @@ export const equipmentLibrary: EquipmentDef[] = [
     controls: []
   }
 ];
+
+/** Categorized tabs for Empty Studio v3.0 rack / stage pickers (derived from `category` + rack height). */
+export type UiRackTab = 'preamps' | 'dynamics' | 'eq' | 'fx' | 'utilities';
+export type UiStageTab = 'microphones' | 'sources';
+
+export const UI_RACK_TAB_ORDER: UiRackTab[] = [
+  'preamps',
+  'dynamics',
+  'eq',
+  'fx',
+  'utilities',
+];
+
+export const UI_RACK_TAB_LABELS: Record<UiRackTab, string> = {
+  preamps: 'Preamps',
+  dynamics: 'Dynamics',
+  eq: 'EQ',
+  fx: 'FX',
+  utilities: 'Utilities',
+};
+
+export const UI_STAGE_TAB_ORDER: UiStageTab[] = ['microphones', 'sources'];
+
+export const UI_STAGE_TAB_LABELS: Record<UiStageTab, string> = {
+  microphones: 'Microphones',
+  sources: 'Instrument Sources',
+};
+
+export function getRackPickerTab(def: EquipmentDef): UiRackTab | null {
+  if (def.heightUnits <= 0) return null;
+  switch (def.category) {
+    case 'preamp':
+      return 'preamps';
+    case 'compressor':
+      return 'dynamics';
+    case 'eq':
+      return 'eq';
+    case 'reverb':
+    case 'delay':
+    case 'effects':
+      return 'fx';
+    default:
+      return 'utilities';
+  }
+}
+
+export function isStagePickerItem(def: EquipmentDef): boolean {
+  return (
+    def.heightUnits === 0 &&
+    (def.category === 'microphone' || def.category === 'source')
+  );
+}
+
+export function getStagePickerTab(def: EquipmentDef): UiStageTab | null {
+  if (!isStagePickerItem(def)) return null;
+  return def.category === 'microphone' ? 'microphones' : 'sources';
+}
 
 equipmentLibrary.forEach((eq) => {
   if (!eq.educationalTip) {
@@ -603,9 +688,10 @@ equipmentLibrary.forEach((eq) => {
 
 export const getEquipmentById = (id: string) => equipmentLibrary.find(e => e.id === id);
 
-export const signalColors = {
-  mic: '#00E5FF',    // Cyan
-  line: '#76FF03',   // Neon Green
-  speaker: '#FF3D00', // Deep Orange
-  digital: '#D600FF'  // Purple
+/** Cable / port coloring by `SignalLevel` (Renderer + UI). */
+export const signalColors: Record<SignalLevel, string> = {
+  mic: '#00bcd4',
+  line: '#2e7d32',
+  speaker: '#e65100',
+  digital: '#7c4dff',
 };

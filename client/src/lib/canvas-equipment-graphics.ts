@@ -5,6 +5,8 @@
 import type { EquipmentNode } from '../../../shared/equipment-types';
 import type { EquipmentDef, SignalLevel } from '@/lib/equipment-library';
 import { equipmentLibrary } from '@/lib/equipment-library';
+import type { StudioZones } from '@/lib/studio-layout';
+import { snapRackNodePosition as snapRackNodePositionFromLayout } from '@/lib/studio-layout';
 
 export interface GraphicsContext {
   ctx: CanvasRenderingContext2D;
@@ -17,47 +19,147 @@ export interface GraphicsContext {
   isSelected?: boolean;
 }
 
-export const RACK_RAIL_X = [300, 900] as const;
-
-/** All rack-mount gear (heightUnits &gt; 0) snaps to 1U grid and left/right bay between rails. */
+/** Rack-mount gear snaps to 1U grid inside the centered vertical rack (viewport width + height). */
 export function snapRackNodePosition(
   x: number,
   y: number,
   width: number,
-  heightUnits: number
+  heightUnits: number,
+  worldWidth: number,
+  worldHeight?: number
 ): { x: number; y: number } {
-  if (heightUnits <= 0) return { x, y };
-  const fy = Math.round(y / 44) * 44;
-  const leftSnap = RACK_RAIL_X[0] + 8;
-  const rightSnap = RACK_RAIL_X[1] - width - 8;
-  const fx =
-    Math.abs(x - leftSnap) <= Math.abs(x - rightSnap) ? leftSnap : rightSnap;
-  return { x: fx, y: fy };
+  return snapRackNodePositionFromLayout(
+    x,
+    y,
+    width,
+    heightUnits,
+    worldWidth,
+    worldHeight
+  );
 }
 
+/**
+ * v3.0 vertical rack: 600px-wide bay centered on canvas, with punched rails and stage wings.
+ */
 export function drawRackRails(
   ctx: CanvasRenderingContext2D,
+  zones: StudioZones,
   vh: number,
-  _zoom: number
+  z: number
 ): void {
-  const stripW = 6;
-  for (const rx of RACK_RAIL_X) {
-    const g = ctx.createLinearGradient(rx, 0, rx + stripW, 0);
-    g.addColorStop(0, '#2a2a2a');
-    g.addColorStop(0.4, '#5a5a5a');
-    g.addColorStop(0.55, '#3a3a3a');
-    g.addColorStop(1, '#1a1a1a');
-    ctx.fillStyle = g;
-    ctx.fillRect(rx - stripW / 2, 0, stripW, vh);
-    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-    ctx.lineWidth = 0.5;
-    ctx.beginPath();
-    ctx.moveTo(rx - stripW / 2, 0);
-    ctx.lineTo(rx - stripW / 2, vh);
-    ctx.moveTo(rx + stripW / 2, 0);
-    ctx.lineTo(rx + stripW / 2, vh);
-    ctx.stroke();
+  if (
+    !Number.isFinite(vh) ||
+    vh <= 0 ||
+    !Number.isFinite(z) ||
+    z <= 0
+  ) {
+    return;
   }
+  const { rackLeft, rackRight, rackLeftRail: L, rackRightRail: R, vw } = zones;
+  if (![L, R, rackLeft, rackRight, vw].every((n) => Number.isFinite(n))) {
+    return;
+  }
+  ctx.save();
+
+  const stageGradL = ctx.createLinearGradient(0, 0, rackLeft, 0);
+  stageGradL.addColorStop(0, '#08090c');
+  stageGradL.addColorStop(1, '#101218');
+  ctx.fillStyle = stageGradL;
+  ctx.fillRect(0, 0, rackLeft, vh);
+
+  const stageGradR = ctx.createLinearGradient(rackRight, 0, vw, 0);
+  stageGradR.addColorStop(0, '#101218');
+  stageGradR.addColorStop(1, '#08090c');
+  ctx.fillStyle = stageGradR;
+  ctx.fillRect(rackRight, 0, vw - rackRight, vh);
+
+  ctx.fillStyle = '#050506';
+  ctx.fillRect(rackLeft, 0, rackRight - rackLeft, vh);
+  const bayGrad = ctx.createLinearGradient(rackLeft, 0, rackRight, 0);
+  bayGrad.addColorStop(0, 'rgba(255,255,255,0.04)');
+  bayGrad.addColorStop(0.45, 'rgba(0,0,0,0.35)');
+  bayGrad.addColorStop(1, 'rgba(255,255,255,0.03)');
+  ctx.fillStyle = bayGrad;
+  ctx.fillRect(rackLeft + 10 / z, 0, rackRight - rackLeft - 20 / z, vh);
+
+  ctx.strokeStyle = 'rgba(232,160,32,0.22)';
+  ctx.lineWidth = 1.4 / z;
+  ctx.strokeRect(rackLeft + 0.5 / z, 0.5 / z, rackRight - rackLeft - 1 / z, vh - 1 / z);
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.lineWidth = 0.85 / z;
+  ctx.strokeRect(rackLeft + 4 / z, 4 / z, rackRight - rackLeft - 8 / z, vh - 8 / z);
+
+  const drawPost = (cx: number) => {
+    const stripW = 14 / z;
+    const x0 = cx - stripW / 2;
+    const g = ctx.createLinearGradient(x0, 0, x0 + stripW, 0);
+    g.addColorStop(0, '#1c1c20');
+    g.addColorStop(0.15, '#4a4d56');
+    g.addColorStop(0.35, '#8f939c');
+    g.addColorStop(0.5, '#3d4047');
+    g.addColorStop(0.65, '#6d717a');
+    g.addColorStop(0.82, '#2e3036');
+    g.addColorStop(1, '#141418');
+    ctx.fillStyle = g;
+    ctx.fillRect(x0, 0, stripW, vh);
+    ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+    ctx.lineWidth = 0.6 / z;
+    ctx.beginPath();
+    ctx.moveTo(x0, 0);
+    ctx.lineTo(x0, vh);
+    ctx.moveTo(x0 + stripW, 0);
+    ctx.lineTo(x0 + stripW, vh);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.beginPath();
+    ctx.moveTo(x0 + stripW * 0.35, 0);
+    ctx.lineTo(x0 + stripW * 0.35, vh);
+    ctx.stroke();
+
+    const holeSpacing = 44;
+    for (let hy = 22; hy < vh - 12; hy += holeSpacing) {
+      ctx.beginPath();
+      ctx.fillStyle = '#0a0a0c';
+      ctx.arc(cx, hy, 3.2 / z, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+      ctx.lineWidth = 0.5 / z;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+      ctx.arc(cx, hy, 2.2 / z, 0.3, Math.PI * 1.2);
+      ctx.stroke();
+    }
+
+    for (let sy = 18; sy < vh - 8; sy += 52) {
+      const sr = 2.4 / z;
+      for (const sign of [-1, 1] as const) {
+        const scx = cx + sign * stripW * 0.55;
+        ctx.beginPath();
+        const sg = ctx.createRadialGradient(
+          scx - sr * 0.3,
+          sy - sr * 0.3,
+          0,
+          scx,
+          sy,
+          sr * 1.4
+        );
+        sg.addColorStop(0, '#e8eaef');
+        sg.addColorStop(0.55, '#9a9ea6');
+        sg.addColorStop(1, '#4a4d52');
+        ctx.fillStyle = sg;
+        ctx.arc(scx, sy, sr, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+        ctx.lineWidth = 0.45 / z;
+        ctx.stroke();
+      }
+    }
+  };
+
+  drawPost(L);
+  drawPost(R);
+  ctx.restore();
 }
 
 export type ControlHit =
@@ -138,16 +240,76 @@ function drawMarconiGainTicks(
   ctx.restore();
 }
 
+/** Rack ear width (px) at left [0,20) and right (580,600] of a 600px-wide module. */
+const RACK_EAR_W_PX = 20;
+
+function rackInnerMetrics(
+  x: number,
+  w: number
+): { ix: number; iw: number; ears: boolean } {
+  const ears = w >= 560;
+  if (!ears) return { ix: x, iw: w, ears: false };
+  return { ix: x + RACK_EAR_W_PX, iw: w - 2 * RACK_EAR_W_PX, ears: true };
+}
+
+function drawRackEars(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number
+): void {
+  const ear = RACK_EAR_W_PX;
+  const drawStrip = (sx: number, flip: boolean) => {
+    const g = ctx.createLinearGradient(
+      flip ? sx + ear : sx,
+      y,
+      flip ? sx : sx + ear,
+      y
+    );
+    if (flip) {
+      g.addColorStop(0, '#14161c');
+      g.addColorStop(0.28, '#2f333a');
+      g.addColorStop(0.45, '#8e939d');
+      g.addColorStop(0.65, '#3d424b');
+      g.addColorStop(1, '#0c0e12');
+    } else {
+      g.addColorStop(0, '#0c0e12');
+      g.addColorStop(0.35, '#3d424b');
+      g.addColorStop(0.55, '#8e939d');
+      g.addColorStop(0.72, '#2f333a');
+      g.addColorStop(1, '#14161c');
+    }
+    ctx.fillStyle = g;
+    ctx.fillRect(sx, y, ear, h);
+    ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(sx + 0.5, y + 0.5, ear - 1, h - 1);
+    for (let sy = 16; sy < h - 10; sy += 52) {
+      ctx.beginPath();
+      ctx.fillStyle = '#0a0a0c';
+      ctx.arc(sx + ear * 0.5, sy, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+  };
+  drawStrip(x, false);
+  drawStrip(x + w - ear, true);
+}
+
 /** Outer grey skirt + inner colored cap (classic concentric EQ stack). */
 function drawConcentricEqKnob(
   ctx: CanvasRenderingContext2D,
   cx: number,
   cy: number,
   angle: number,
-  innerBlue: boolean
+  innerBlue: boolean,
+  compact?: boolean
 ): void {
-  const outerR = 14;
-  const innerR = 9;
+  const outerR = compact ? 9 : 14;
+  const innerR = compact ? 6 : 9;
   ctx.save();
   ctx.translate(cx, cy);
   const skirt = ctx.createRadialGradient(0, 0, 0, 0, 0, outerR);
@@ -184,21 +346,33 @@ function drawConcentricEqKnob(
   ctx.restore();
 }
 
+interface DrawBrushedFaceOpts {
+  rackEars?: boolean;
+}
+
 function drawBrushedFace(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
   w: number,
   h: number,
-  base: string
+  base: string,
+  opts?: DrawBrushedFaceOpts
 ): void {
+  const useEars = Boolean(opts?.rackEars && w >= 560);
+  if (useEars) {
+    drawRackEars(ctx, x, y, w, h);
+  }
+  const ix = useEars ? x + RACK_EAR_W_PX : x;
+  const iw = useEars ? w - 2 * RACK_EAR_W_PX : w;
+
   ctx.fillStyle = base;
-  ctx.fillRect(x, y, w, h);
+  ctx.fillRect(ix, y, iw, h);
   ctx.save();
   ctx.globalAlpha = 0.06;
-  for (let i = 0; i < w; i += 2) {
+  for (let i = 0; i < iw; i += 2) {
     ctx.fillStyle = i % 4 === 0 ? '#fff' : '#000';
-    ctx.fillRect(x + i, y, 1, h);
+    ctx.fillRect(ix + i, y, 1, h);
   }
   ctx.restore();
 
@@ -206,14 +380,14 @@ function drawBrushedFace(
   for (let y0 = y; y0 < y + h; y0 += u) {
     const segBottom = Math.min(y0 + u, y + h);
     ctx.fillStyle = 'rgba(255,255,255,0.28)';
-    ctx.fillRect(x, y0, w, 1);
+    ctx.fillRect(ix, y0, iw, 1);
     ctx.fillStyle = 'rgba(0,0,0,0.42)';
-    ctx.fillRect(x, segBottom - 1, w, 1);
+    ctx.fillRect(ix, segBottom - 1, iw, 1);
   }
 
   ctx.strokeStyle = 'rgba(255,255,255,0.15)';
   ctx.lineWidth = 1;
-  ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+  ctx.strokeRect(ix + 0.5, y + 0.5, iw - 1, h - 1);
 }
 
 function drawKnobAt(
@@ -310,119 +484,151 @@ function draw1176Vu(
 function renderNeve1073(gc: GraphicsContext): void {
   const { ctx, x, y, w, h, node } = gc;
   const raf = '#4a5b6d';
-  drawBrushedFace(ctx, x, y, w, h, raf);
+  drawBrushedFace(ctx, x, y, w, h, raf, { rackEars: true });
+  const { ix, iw } = rackInnerMetrics(x, w);
+  const compact = h <= 44.5;
+  const kr = compact ? 10 : 16;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(ix, y, iw, h);
+  ctx.clip();
 
   ctx.fillStyle = 'rgba(255,255,255,0.92)';
-  ctx.font = 'bold 11px "Helvetica Neue", sans-serif';
+  ctx.font = compact ? 'bold 9px "Helvetica Neue", sans-serif' : 'bold 11px "Helvetica Neue", sans-serif';
   ctx.textAlign = 'left';
-  ctx.fillText('1073', x + w - 52, y + 16);
+  ctx.fillText('1073', ix + iw - 44, y + (compact ? 12 : 16));
 
   const lib = equipmentLibrary.find((e) => e.id === 'neve-1073')!;
   const g = controlDef(lib, 'gain')!;
   const gainV = numState(node, 'gain', g.default as number);
-  const gcx = x + 52;
-  const gcy = y + h / 2;
-  drawMarconiGainTicks(ctx, gcx, gcy, 16);
-  drawKnobAt(
-    ctx,
-    gcx,
-    gcy,
-    16,
-    marconiGainAngle(g.min ?? 20, g.max ?? 80, gainV),
-    'marconi'
-  );
+  const gcx = ix + iw * (g.relX ?? 0.09);
+  const gcy = y + h * (g.relY ?? 0.5);
+  if (gcy <= y + h - 5 && gcy >= y + 5) {
+    drawMarconiGainTicks(ctx, gcx, gcy, kr);
+    drawKnobAt(
+      ctx,
+      gcx,
+      gcy,
+      kr,
+      marconiGainAngle(g.min ?? 20, g.max ?? 80, gainV),
+      'marconi'
+    );
+  }
 
   const hi = controlDef(lib, 'high-shelf')!;
   const mid = controlDef(lib, 'mid-freq')!;
   const lo = controlDef(lib, 'low-shelf')!;
+  const yEq = y + h * (hi.relY ?? 0.5);
   drawConcentricEqKnob(
     ctx,
-    x + 175,
-    y + h / 2,
+    ix + iw * (hi.relX ?? 0.28),
+    yEq,
     knobAngle(hi.min ?? -15, hi.max ?? 15, numState(node, 'high-shelf', 0)),
-    true
+    true,
+    compact
   );
   drawConcentricEqKnob(
     ctx,
-    x + 255,
-    y + h / 2,
+    ix + iw * (mid.relX ?? 0.44),
+    yEq,
     knobAngle(mid.min ?? 0.36, mid.max ?? 7.2, numState(node, 'mid-freq', 1.6)),
-    true
+    true,
+    compact
   );
   drawConcentricEqKnob(
     ctx,
-    x + 335,
-    y + h / 2,
+    ix + iw * (lo.relX ?? 0.6),
+    yEq,
     knobAngle(lo.min ?? -15, lo.max ?? 15, numState(node, 'low-shelf', 0)),
-    false
+    false,
+    compact
   );
 
   ctx.fillStyle = '#8899aa';
-  ctx.font = '8px sans-serif';
-  ctx.fillText('GAIN', x + 38, y + h - 6);
-  ctx.fillText('HI', x + 165, y + h - 6);
-  ctx.fillText('MID', x + 245, y + h - 6);
-  ctx.fillText('LO', x + 325, y + h - 6);
+  ctx.font = compact ? '6px sans-serif' : '8px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('GAIN', gcx, y + h - 4);
+  ctx.fillText('HI', ix + iw * (hi.relX ?? 0.28), y + h - 4);
+  ctx.fillText('MID', ix + iw * (mid.relX ?? 0.44), y + h - 4);
+  ctx.fillText('LO', ix + iw * (lo.relX ?? 0.6), y + h - 4);
 
   const ph = boolState(node, 'phantom', false);
+  const phx = ix + iw * (controlDef(lib, 'phantom')!.relX ?? 0.88);
+  const phy = y + h * (controlDef(lib, 'phantom')!.relY ?? 0.5);
+  const pw = compact ? 22 : 28;
+  const phh = compact ? 10 : 16;
   ctx.fillStyle = ph ? '#E8A020' : '#333';
-  ctx.fillRect(x + 420, y + h / 2 - 8, 28, 16);
+  ctx.fillRect(phx - pw / 2, phy - phh / 2, pw, phh);
   ctx.fillStyle = '#ccc';
-  ctx.font = '7px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('48V', x + 434, y + h / 2 + 3);
+  ctx.font = compact ? '6px sans-serif' : '7px sans-serif';
+  ctx.fillText('48V', phx, phy + 3);
   ctx.textAlign = 'left';
+  ctx.restore();
 }
 
 // ─── API 512c ───
 function renderApi512c(gc: GraphicsContext): void {
   const { ctx, x, y, w, h, node } = gc;
-  drawBrushedFace(ctx, x, y, w, h, '#1c1c1c');
+  drawBrushedFace(ctx, x, y, w, h, '#1c1c1c', { rackEars: true });
+  const { ix, iw } = rackInnerMetrics(x, w);
+  const lib = equipmentLibrary.find((e) => e.id === 'api-512c')!;
+  const g = controlDef(lib, 'gain')!;
+  const padC = controlDef(lib, 'pad')!;
+  const p48 = controlDef(lib, 'phantom')!;
+  const gv = numState(node, 'gain', g.default as number);
+  const gcx = ix + iw * (g.relX ?? 0.38);
+  const gcy = y + h * (g.relY ?? 0.64);
+  const rowY = y + h * (padC.relY ?? 0.64);
+  const pcx = ix + iw * (padC.relX ?? 0.5);
+  const phx = ix + iw * (p48.relX ?? 0.62);
+  const btn = 8;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
+  ctx.clip();
 
   ctx.fillStyle = '#0054a6';
-  ctx.font = 'bold 14px sans-serif';
+  ctx.font = 'bold 9px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('API', x + w / 2, y + 22);
+  ctx.fillText('API', ix + iw / 2, y + 10);
   ctx.fillStyle = '#888';
-  ctx.font = '8px sans-serif';
-  ctx.fillText('512c', x + w / 2, y + 32);
-
-  const g = controlDef(
-    equipmentLibrary.find((e) => e.id === 'api-512c')!,
-    'gain'
-  )!;
-  const gv = numState(node, 'gain', g.default as number);
-  const colX = x + w - 72;
-  let cy = y + 48;
-  drawKnobAt(
-    ctx,
-    colX,
-    cy,
-    14,
-    knobAngle(g.min ?? 0, g.max ?? 65, gv),
-    'silver'
-  );
-  ctx.fillStyle = '#aaa';
   ctx.font = '7px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('GAIN', colX, cy + 24);
-  cy += 52;
-  ctx.fillStyle = boolState(node, 'pad', false) ? '#0054a6' : '#444';
-  ctx.fillRect(colX - 14, cy - 10, 28, 20);
-  ctx.fillStyle = '#ccc';
-  ctx.fillText('PAD', colX, cy + 4);
-  cy += 40;
-  ctx.fillStyle = boolState(node, 'phantom', false) ? '#0054a6' : '#444';
-  ctx.fillRect(colX - 14, cy - 10, 28, 20);
-  ctx.fillStyle = '#ccc';
-  ctx.fillText('48V', colX, cy + 4);
+  ctx.fillText('512c', ix + iw / 2, y + 18);
+
+  if (gcy <= y + h - 5 && gcy >= y + 5) {
+    drawKnobAt(
+      ctx,
+      gcx,
+      gcy,
+      10,
+      knobAngle(g.min ?? 0, g.max ?? 65, gv),
+      'silver'
+    );
+    ctx.fillStyle = '#aaa';
+    ctx.font = '6px sans-serif';
+    ctx.fillText('GAIN', gcx, gcy + 14);
+  }
+
+  if (rowY <= y + h - 5 && rowY >= y + 5) {
+    ctx.fillStyle = boolState(node, 'pad', false) ? '#0054a6' : '#444';
+    ctx.fillRect(pcx - btn / 2, rowY - btn / 2, btn, btn);
+    ctx.fillStyle = boolState(node, 'phantom', false) ? '#0054a6' : '#444';
+    ctx.fillRect(phx - btn / 2, rowY - btn / 2, btn, btn);
+    ctx.fillStyle = '#ccc';
+    ctx.font = '6px sans-serif';
+    ctx.fillText('PAD', pcx, rowY + 14);
+    ctx.fillText('48V', phx, rowY + 14);
+  }
   ctx.textAlign = 'left';
+  ctx.restore();
 }
 
 // ─── UREI 1176 ───
 function renderUrei1176(gc: GraphicsContext): void {
   const { ctx, x, y, w, h, node } = gc;
-  drawBrushedFace(ctx, x, y, w, h, '#151515');
+  drawBrushedFace(ctx, x, y, w, h, '#151515', { rackEars: true });
 
   const def = equipmentLibrary.find((e) => e.id === 'urei-1176')!;
   const inC = controlDef(def, 'input')!;
@@ -501,7 +707,7 @@ function renderUrei1176(gc: GraphicsContext): void {
 function renderPultec(gc: GraphicsContext): void {
   const { ctx, x, y, w, h, node } = gc;
   const navy = '#1b263b';
-  drawBrushedFace(ctx, x, y, w, h, navy);
+  drawBrushedFace(ctx, x, y, w, h, navy, { rackEars: true });
 
   ctx.fillStyle = 'rgba(255,240,220,0.9)';
   ctx.font = 'bold 11px "Times New Roman", serif';
@@ -675,7 +881,7 @@ function renderSM57(gc: GraphicsContext): void {
 // ─── SSL 4000 G+ — eight channel strips (simplified photorealistic) ───
 function renderSsl4000gConsole(gc: GraphicsContext): void {
   const { ctx, x, y, w, h } = gc;
-  drawBrushedFace(ctx, x, y, w, h, '#2d2d2d');
+  drawBrushedFace(ctx, x, y, w, h, '#2d2d2d', { rackEars: true });
 
   ctx.fillStyle = '#c0c0c0';
   ctx.font = 'bold 12px sans-serif';
@@ -785,13 +991,14 @@ function renderConsoleStrip(
   channels: number
 ): void {
   const { ctx, x, y, w, h } = gc;
-  drawBrushedFace(ctx, x, y, w, h, face);
+  drawBrushedFace(ctx, x, y, w, h, face, { rackEars: true });
+  const { ix, iw } = rackInnerMetrics(x, w);
   ctx.fillStyle = accent;
   ctx.font = 'bold 11px sans-serif';
-  ctx.fillText(label, x + 12, y + 18);
-  const chW = Math.min(48, (w - 24) / Math.min(channels, 16));
+  ctx.fillText(label, ix + 8, y + 18);
+  const chW = Math.min(48, (iw - 16) / Math.min(channels, 16));
   for (let i = 0; i < Math.min(channels, 16); i++) {
-    const cx = x + 16 + i * chW;
+    const cx = ix + 8 + i * chW;
     ctx.fillStyle = '#333';
     ctx.fillRect(cx, y + 40, chW - 6, h - 52);
     ctx.fillStyle = accent;
@@ -799,9 +1006,122 @@ function renderConsoleStrip(
   }
 }
 
+/** Generic clippable control renderer: positions from `relX` / `relY` on the inner rack face. */
+function renderControls(
+  ctx: CanvasRenderingContext2D,
+  gc: GraphicsContext,
+  def: EquipmentDef
+): void {
+  const { x, y, w, h, node } = gc;
+  const oneU = h <= 44.5;
+  const knobR = oneU ? 10 : 14;
+  const btnS = oneU ? 8 : 12;
+  const useInner = (def.heightUnits ?? 0) > 0 && w >= 560;
+  const { ix, iw } = useInner ? rackInnerMetrics(x, w) : { ix: x, iw: w };
+
+  const drawable = def.controls.filter(
+    (c) =>
+      c.type === 'knob' ||
+      c.type === 'switch' ||
+      c.type === 'button' ||
+      c.type === 'select'
+  );
+  const missingRel = drawable.filter((c) => c.relX === undefined);
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
+  ctx.clip();
+
+  for (const c of def.controls) {
+    if (c.type === 'fader') continue;
+
+    let relX = c.relX;
+    const defaultY = oneU ? 0.58 : 0.52;
+    let relY = c.relY ?? defaultY;
+
+    if (
+      (c.type === 'knob' ||
+        c.type === 'switch' ||
+        c.type === 'button' ||
+        c.type === 'select') &&
+      relX === undefined
+    ) {
+      const idx = missingRel.indexOf(c);
+      if (idx >= 0) {
+        relX =
+          missingRel.length <= 1 ? 0.5 : (idx + 1) / (missingRel.length + 1);
+      }
+    }
+    if (relX === undefined) continue;
+
+    const cx = ix + iw * relX;
+    const cy = y + h * relY;
+    if (cy > y + h - 5 || cy < y + 5) continue;
+
+    switch (c.type) {
+      case 'knob': {
+        const v = numState(node, c.id, c.default as number);
+        const mn = c.min ?? 0;
+        const mx = c.max ?? 100;
+        drawKnobAt(ctx, cx, cy, knobR, knobAngle(mn, mx, v), 'silver');
+        break;
+      }
+      case 'switch':
+      case 'button': {
+        const on = boolState(node, c.id, Boolean(c.default));
+        ctx.fillStyle = on ? '#E8A020' : '#444';
+        ctx.fillRect(cx - btnS / 2, cy - btnS / 2, btnS, btnS);
+        break;
+      }
+      case 'select': {
+        const curRaw = node.state?.[c.id];
+        const cur =
+          typeof curRaw === 'string'
+            ? curRaw
+            : typeof c.default === 'string'
+              ? c.default
+              : String(c.options?.[0]?.value ?? '');
+        ctx.fillStyle = '#1a1a1a';
+        ctx.fillRect(cx - 24, cy - 10, 48, 20);
+        ctx.strokeStyle = '#555';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(cx - 24, cy - 10, 48, 20);
+        ctx.fillStyle = '#ccc';
+        ctx.font = '7px sans-serif';
+        ctx.textAlign = 'center';
+        const label =
+          c.options?.find((o) => o.value === cur)?.label ?? String(cur);
+        ctx.fillText(label.slice(0, 8), cx, cy + 3);
+        ctx.textAlign = 'left';
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
+  ctx.restore();
+}
+
 function renderDefault(gc: GraphicsContext): void {
   const { ctx, x, y, w, h, node } = gc;
-  drawBrushedFace(ctx, x, y, w, h, '#111');
+  const def = equipmentLibrary.find((e) => e.id === node.defId);
+  const rackEars = Boolean(def && def.heightUnits > 0 && w >= 560);
+  drawBrushedFace(ctx, x, y, w, h, '#111', { rackEars });
+  if (
+    def &&
+    def.controls.some(
+      (c) =>
+        c.type === 'knob' ||
+        c.type === 'switch' ||
+        c.type === 'button' ||
+        c.type === 'select'
+    )
+  ) {
+    renderControls(ctx, gc, def);
+    return;
+  }
   ctx.fillStyle = '#E8A020';
   ctx.font = '10px sans-serif';
   ctx.textAlign = 'center';
@@ -838,12 +1158,20 @@ export function hitTestInteractiveControl(
   switch (def.id) {
     case 'neve-1073': {
       const d = def;
-      const tests: Array<{ id: string; cx: number; cy: number; r: number }> = [
-        { id: 'gain', cx: x + 52, cy: y + h / 2, r: 18 },
-        { id: 'high-shelf', cx: x + 175, cy: y + h / 2, r: 16 },
-        { id: 'mid-freq', cx: x + 255, cy: y + h / 2, r: 16 },
-        { id: 'low-shelf', cx: x + 335, cy: y + h / 2, r: 16 },
-      ];
+      const { ix, iw } = rackInnerMetrics(x, w);
+      const compact = h <= 44.5;
+      const kr = compact ? 12 : 18;
+      const knobIds = ['gain', 'high-shelf', 'mid-freq', 'low-shelf'] as const;
+      const tests: Array<{ id: string; cx: number; cy: number; r: number }> =
+        knobIds.map((id) => {
+          const c = controlDef(d, id)!;
+          return {
+            id,
+            cx: ix + iw * (c.relX ?? 0.5),
+            cy: y + h * (c.relY ?? 0.5),
+            r: id === 'gain' ? kr + 2 : kr,
+          };
+        });
       for (const t of tests) {
         if (!hitCircle(wx, wy, t.cx, t.cy, t.r)) continue;
         const c = controlDef(d, t.id)!;
@@ -857,7 +1185,17 @@ export function hitTestInteractiveControl(
           value: v,
         };
       }
-      if (wx >= x + 420 && wx <= x + 448 && wy >= y + h / 2 - 10 && wy <= y + h / 2 + 10) {
+      const ph = controlDef(d, 'phantom')!;
+      const phx = ix + iw * (ph.relX ?? 0.88);
+      const phy = y + h * (ph.relY ?? 0.5);
+      const pw = compact ? 22 : 28;
+      const phh = compact ? 10 : 16;
+      if (
+        wx >= phx - pw / 2 &&
+        wx <= phx + pw / 2 &&
+        wy >= phy - phh / 2 &&
+        wy <= phy + phh / 2
+      ) {
         return {
           kind: 'switch',
           nodeId: node.id,
@@ -869,7 +1207,13 @@ export function hitTestInteractiveControl(
     }
     case 'api-512c': {
       const d = def;
-      if (hitCircle(wx, wy, x + w - 72, y + 48, 18)) {
+      const { ix, iw } = rackInnerMetrics(x, w);
+      const g = controlDef(d, 'gain')!;
+      const padC = controlDef(d, 'pad')!;
+      const p48 = controlDef(d, 'phantom')!;
+      const gcx = ix + iw * (g.relX ?? 0.38);
+      const gcy = y + h * (g.relY ?? 0.64);
+      if (hitCircle(wx, wy, gcx, gcy, 14)) {
         const c = controlDef(d, 'gain')!;
         return {
           kind: 'knob',
@@ -880,11 +1224,15 @@ export function hitTestInteractiveControl(
           value: numState(node, 'gain', c.default as number),
         };
       }
+      const rowY = y + h * (padC.relY ?? 0.64);
+      const pcx = ix + iw * (padC.relX ?? 0.5);
+      const phx = ix + iw * (p48.relX ?? 0.62);
+      const btn = 8;
       if (
-        wx >= x + w - 86 &&
-        wx <= x + w - 58 &&
-        wy >= y + 86 &&
-        wy <= y + 106
+        wx >= pcx - btn / 2 &&
+        wx <= pcx + btn / 2 &&
+        wy >= rowY - btn / 2 &&
+        wy <= rowY + btn / 2
       ) {
         return {
           kind: 'switch',
@@ -894,10 +1242,10 @@ export function hitTestInteractiveControl(
         };
       }
       if (
-        wx >= x + w - 86 &&
-        wx <= x + w - 58 &&
-        wy >= y + 126 &&
-        wy <= y + 146
+        wx >= phx - btn / 2 &&
+        wx <= phx + btn / 2 &&
+        wy >= rowY - btn / 2 &&
+        wy <= rowY + btn / 2
       ) {
         return {
           kind: 'switch',
@@ -1010,8 +1358,8 @@ export interface PortPick {
   type: SignalLevel;
 }
 
-const PORT_ROW_H = 14;
-const PORT_HIT_X = 16;
+const PORT_ROW_H = 16;
+const PORT_HIT_X = 22;
 
 /** Hit-test I/O jacks: inputs along top edge, outputs along bottom (world px). */
 export function hitTestAnyPort(

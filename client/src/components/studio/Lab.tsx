@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import Renderer from './Renderer';
-import EquipmentLibraryPanel from '../EquipmentLibraryPanel';
+import ProfessionalMixerConsole from './ProfessionalMixerConsole';
+import StudioGearPickers, { DEF_MIME } from './StudioGearPickers';
 import InspectorPanel from '../InspectorPanel';
 import ScenarioPanel from '../ScenarioPanel';
 import AssistantPanel from '../AssistantPanel';
@@ -8,11 +9,19 @@ import MonitorMixPanel from '../MonitorMixPanel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PeakMeter, VUMeter } from '@/components/Meters';
 import { snapRackNodePosition } from '@/lib/canvas-equipment-graphics';
+import {
+  getStudioZones,
+  nextStageSlot,
+  nextRackSlot,
+  defaultRackColumnX,
+} from '@/lib/studio-layout';
+import { useSetStudioHeaderRight } from '@/contexts/StudioHeaderContext';
 import type { StudioState, EquipmentNode } from '../../../../shared/equipment-types';
 import type { EquipmentDef } from '@/lib/equipment-library';
 import { equipmentLibrary } from '@/lib/equipment-library';
 import { audioEngine } from '@/lib/audio-engine-v2';
 import { scenarios } from '@/lib/scenarios';
+import { isFoundationalMixerNodeId } from '@/lib/foundational-mixer-anchors';
 
 /** Inspector / safety panels expect `settings` + `signalLevels`; shared nodes use `state` only. */
 function adaptNodeForLegacyPanels(node: EquipmentNode): EquipmentNode & {
@@ -27,13 +36,12 @@ function adaptNodeForLegacyPanels(node: EquipmentNode): EquipmentNode & {
 }
 
 const Lab: React.FC = () => {
-  const WORKSPACE_STORAGE_KEY = 'signal-flow-workspace';
+  const WORKSPACE_STORAGE_KEY = 'signal-flow-workspace-v3';
   const [state, setState] = useState<StudioState>({
     nodes: [],
     connections: [],
     selectedNodeId: null,
   });
-  const [showLeftSidebar, setShowLeftSidebar] = useState(true);
   const [showRightSidebar, setShowRightSidebar] = useState(true);
   const [zoom, setZoom] = useState(1);
   const [engineRunning, setEngineRunning] = useState(false);
@@ -53,35 +61,11 @@ const Lab: React.FC = () => {
   const [scenarioHintId, setScenarioHintId] = useState<string | null>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
   const canvasElementRef = useRef<HTMLCanvasElement | null>(null);
+  const viewportMetricsRef = useRef({ w: 1280, h: 800 });
 
   useEffect(() => {
-    void audioEngine.start().then(() => {
-      try {
-        const raw = localStorage.getItem(WORKSPACE_STORAGE_KEY);
-        if (!raw) return;
-        const parsed = JSON.parse(raw) as Partial<StudioState>;
-        if (!parsed.nodes || !parsed.connections) return;
-        setState({
-          nodes: parsed.nodes,
-          connections: parsed.connections,
-          selectedNodeId: null,
-        });
-        parsed.nodes.forEach((node) => {
-          const def = equipmentLibrary.find((d) => d.id === node.defId);
-          if (!def) return;
-          if (def.category === 'signal-gen') {
-            audioEngine.createSourceNode(node.id, 'sine');
-          } else if (def.category === 'microphone') {
-            audioEngine.createSourceNode(node.id, 'noise');
-          } else {
-            audioEngine.ensurePatchNode(node.id, def.id);
-          }
-          audioEngine.registerNodeProfile(node.id, node.defId, node.state ?? {});
-        });
-      } catch {
-        // Ignore malformed workspace blobs.
-      }
-    });
+    void audioEngine.start();
+    audioEngine.ensureFoundationalMixer();
   }, []);
 
   useEffect(() => {
@@ -132,54 +116,69 @@ const Lab: React.FC = () => {
     if (!def) return;
 
     await audioEngine.start();
-    setEngineRunning(audioEngine.isRunning);
+    setEngineRunning(audioEngine.isRunning && audioEngine.audioContext?.state === 'running');
 
-    const nodeId = `node-${Date.now()}`;
-    const rackNodes = state.nodes
-      .map((node) => {
-        const nodeDef = equipmentLibrary.find((d) => d.id === node.defId);
-        if (!nodeDef || nodeDef.heightUnits <= 0) return null;
-        return { node, nodeDef };
-      })
-      .filter((entry): entry is { node: EquipmentNode; nodeDef: EquipmentDef } => Boolean(entry));
-    const totalRackUnits = rackNodes.reduce((sum, entry) => sum + entry.nodeDef.heightUnits, 0);
-    const rackTop = 44;
-    const rackX = 300;
-    const nextY = rackTop + totalRackUnits * 44;
+    const vw = viewportMetricsRef.current.w;
+    const vh = viewportMetricsRef.current.h;
+    const zones = getStudioZones(vw, vh);
 
     const defaultState: Record<string, unknown> = {};
     if (def.category === 'preamp') {
       defaultState.phantomPower = false;
       defaultState.phantom = false;
     }
-    const newNode: EquipmentNode = {
-      id: nodeId,
-      defId,
-      x: def.heightUnits > 0 ? rackX : 420,
-      y: def.heightUnits > 0 ? nextY : 420,
-      rotation: 0,
-      state: defaultState,
-    };
+
+    const nodeId = `node-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+    setState((prev) => {
+      const pos =
+        def.heightUnits > 0
+          ? nextRackSlot(prev.nodes, def, zones, equipmentLibrary)
+          : nextStageSlot(prev.nodes, def, zones, equipmentLibrary);
+      const newNode: EquipmentNode = {
+        id: nodeId,
+        defId,
+        x: pos.x,
+        y: pos.y,
+        rotation: 0,
+        state: defaultState,
+      };
+      return {
+        ...prev,
+        nodes: [...prev.nodes, newNode],
+        selectedNodeId: newNode.id,
+      };
+    });
 
     audioEngine.createNode(nodeId, defId);
-    audioEngine.registerNodeProfile(nodeId, defId, newNode.state);
-
-    setState((prev) => ({
-      ...prev,
-      nodes: [...prev.nodes, newNode],
-      selectedNodeId: newNode.id,
-    }));
-  }, [state.nodes]);
+    audioEngine.registerNodeProfile(nodeId, defId, defaultState);
+  }, []);
 
   const handleUpdateNode = useCallback((id: string, x: number, y: number) => {
+    const vw = viewportMetricsRef.current.w;
+    const vh = viewportMetricsRef.current.h;
+    const zones = getStudioZones(vw, vh);
     setState((ws) => {
       const node = ws.nodes.find((n) => n.id === id);
       if (!node) return ws;
       const def = equipmentLibrary.find((d) => d.id === node.defId);
-      const snappedPos =
-        def && def.heightUnits > 0
-          ? snapRackNodePosition(x, y, def.width, def.heightUnits)
-          : { x, y };
+      if (!def) return ws;
+
+      let snappedPos: { x: number; y: number };
+      if (def.heightUnits > 0) {
+        snappedPos = snapRackNodePosition(x, y, def.width, def.heightUnits, vw, vh);
+        const maxY = Math.max(44, vh - def.heightUnits * 44 - 24);
+        snappedPos.y = Math.min(Math.max(44, snappedPos.y), maxY);
+      } else {
+        const w = def.width;
+        const h = def.heightUnits > 0 ? def.heightUnits * 44 : 100;
+        const pad = 16;
+        const maxX = Math.max(pad, zones.splitX - w - pad);
+        snappedPos = {
+          x: Math.min(Math.max(pad, x), maxX),
+          y: Math.min(Math.max(40, y), vh - h - 20),
+        };
+      }
       return {
         ...ws,
         nodes: ws.nodes.map((n) =>
@@ -351,16 +350,81 @@ const Lab: React.FC = () => {
     ) => handleConnect(fromNodeId, fromPortId, toNodeId, toPortId),
   }), [handleAddGear, handleConnect]);
 
-  const handlePlay = async () => {
+  const handlePlay = useCallback(async () => {
     await audioEngine.start();
     audioEngine.setMasterGain(0.5);
-    setEngineRunning(audioEngine.isRunning);
-  };
+    setEngineRunning(
+      audioEngine.isRunning && audioEngine.audioContext?.state === 'running'
+    );
+  }, []);
 
-  const handleStop = async () => {
+  const handleStop = useCallback(async () => {
     await audioEngine.suspendOutputWithRampDown();
     setEngineRunning(false);
-  };
+  }, []);
+
+  const setHeaderRight = useSetStudioHeaderRight();
+
+  useEffect(() => {
+    if (!setHeaderRight) return;
+    setHeaderRight(
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <span className="hidden font-mono text-[9px] text-neutral-500 md:inline">
+          {engineRunning ? 'RUNNING' : 'SUSPENDED'}
+        </span>
+        {pendingCable && (
+          <span className="hidden font-mono text-[9px] text-neutral-400 sm:inline">
+            PATCH {pendingCable.signalType.toUpperCase()}
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={() => void handlePlay()}
+          className="rounded bg-emerald-700 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white hover:bg-emerald-600"
+        >
+          Play
+        </button>
+        <button
+          type="button"
+          onClick={() => void handleStop()}
+          className="rounded bg-red-900/85 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white hover:bg-red-800"
+        >
+          Stop
+        </button>
+        <button
+          type="button"
+          onClick={() => setSfvMode((v) => !v)}
+          className={`rounded border px-2.5 py-1.5 text-[9px] font-bold uppercase ${
+            sfvMode
+              ? 'border-emerald-400 bg-emerald-900/45 text-emerald-100'
+              : 'border-white/20 bg-black/35 text-white/75'
+          }`}
+        >
+          SFV
+        </button>
+        <button
+          type="button"
+          onClick={() => setBlueprintMode((v) => !v)}
+          className={`rounded border px-2.5 py-1.5 text-[9px] font-bold uppercase ${
+            blueprintMode
+              ? 'border-sky-400 bg-sky-900/45 text-sky-100'
+              : 'border-white/20 bg-black/35 text-white/75'
+          }`}
+        >
+          Blueprint
+        </button>
+      </div>
+    );
+    return () => setHeaderRight(null);
+  }, [
+    setHeaderRight,
+    engineRunning,
+    sfvMode,
+    blueprintMode,
+    pendingCable,
+    handlePlay,
+    handleStop,
+  ]);
 
   const selectedNode = state.nodes.find((n) => n.id === state.selectedNodeId);
   const selectedDef = selectedNode
@@ -393,6 +457,7 @@ const Lab: React.FC = () => {
   const onRemoveNode = useCallback(() => {
     if (!state.selectedNodeId) return;
     const id = state.selectedNodeId;
+    if (isFoundationalMixerNodeId(id)) return;
     audioEngine.disconnectNode(id);
     setState((prev) => ({
       ...prev,
@@ -453,29 +518,27 @@ const Lab: React.FC = () => {
 
   const hydrateWorkspace = useCallback((next: StudioState) => {
     state.nodes.forEach((n) => audioEngine.disconnectNode(n.id));
+    audioEngine.ensureFoundationalMixer();
     next.nodes.forEach((node) => {
       const def = equipmentLibrary.find((d) => d.id === node.defId);
       if (!def) return;
-      if (def.category === 'signal-gen') {
-        audioEngine.createSourceNode(node.id, 'sine');
-      } else if (def.category === 'microphone') {
-        audioEngine.createSourceNode(node.id, 'noise');
-      } else {
-        audioEngine.ensurePatchNode(node.id, def.id);
-      }
+      audioEngine.createNode(node.id, node.defId);
       audioEngine.registerNodeProfile(node.id, node.defId, node.state ?? {});
     });
-    setState(next);
+    setState({ ...next, nodes: next.nodes });
   }, [state.nodes]);
 
   const loadLesson = useCallback(() => {
     if (lessonPreset !== 'pro-vocal-chain') return;
+    const vw = 1280;
+    const zones = getStudioZones(vw, 800);
+    const rx = defaultRackColumnX(zones, 400);
     const nodes: EquipmentNode[] = [
-      { id: 'lesson-u87', defId: 'u87-condenser', x: 120, y: 380, rotation: 0, state: {} },
-      { id: 'lesson-neve', defId: 'neve-1073', x: 300, y: 44, rotation: 0, state: { phantomPower: true, phantom: true } },
-      { id: 'lesson-la2a', defId: 'la-2a-leveling', x: 300, y: 88, rotation: 0, state: {} },
-      { id: 'lesson-1176', defId: '1176-peak-limiter', x: 300, y: 220, rotation: 0, state: {} },
-      { id: 'lesson-mixer', defId: 'professional-mixer-console', x: 300, y: 308, rotation: 0, state: {} },
+      { id: 'lesson-u87', defId: 'u87-condenser', x: 96, y: 300, rotation: 0, state: {} },
+      { id: 'lesson-neve', defId: 'neve-1073', x: rx, y: 44, rotation: 0, state: { phantomPower: true, phantom: true } },
+      { id: 'lesson-la2a', defId: 'la-2a-leveling', x: rx, y: 88, rotation: 0, state: {} },
+      { id: 'lesson-1176', defId: '1176-peak-limiter', x: rx, y: 220, rotation: 0, state: {} },
+      { id: 'lesson-mixer', defId: 'professional-mixer-console', x: rx, y: 308, rotation: 0, state: {} },
     ];
     const connections = [
       { id: 'lesson-c1', fromNodeId: 'lesson-u87', fromPortId: 'xlr', toNodeId: 'lesson-neve', toPortId: 'mic-in', cableColor: 'mic' },
@@ -512,72 +575,22 @@ const Lab: React.FC = () => {
   }, []);
 
   return (
-    <div className="flex h-[calc(100vh-2.5rem)] w-full flex-col overflow-hidden bg-[#0a0a0a] text-sm text-white">
-      <div className="h-full flex min-h-0 flex-1 overflow-hidden bg-[#0a0a0a]">
+    <div className="flex h-[calc(100vh-52px)] w-full flex-col overflow-hidden bg-[#0a0a0a] text-sm text-white">
+      <div className="flex min-h-0 flex-1 overflow-hidden bg-[#0a0a0a]">
         <div
-          className={`flex shrink-0 flex-col overflow-hidden border-r border-white/10 bg-neutral-900/80 backdrop-blur-xl font-medium transition-all duration-300 ${
-            showLeftSidebar ? 'w-64' : 'w-0 border-r-0'
-          }`}
+          className="relative min-h-0 min-w-0 flex-1"
+          onDragOver={(e) => {
+            if (e.dataTransfer.types.includes(DEF_MIME)) {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'copy';
+            }
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            const id = e.dataTransfer.getData(DEF_MIME);
+            if (id) void ws.addNode(id);
+          }}
         >
-          {showLeftSidebar && (
-            <div className="border-b border-white/10 p-2">
-              <button
-                type="button"
-                onClick={clearWorkspace}
-                className="w-full rounded border border-red-500/40 bg-red-900/20 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-red-200 hover:bg-red-900/35"
-              >
-                Clear Workspace
-              </button>
-              <div className="mt-2 flex gap-1">
-                <button
-                  type="button"
-                  onClick={exportWorkspace}
-                  className="flex-1 rounded border border-blue-400/40 bg-blue-900/20 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-blue-100 hover:bg-blue-900/35"
-                >
-                  Export Lab
-                </button>
-                <button
-                  type="button"
-                  onClick={() => importFileRef.current?.click()}
-                  className="flex-1 rounded border border-emerald-400/40 bg-emerald-900/20 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-emerald-100 hover:bg-emerald-900/35"
-                >
-                  Import Lab
-                </button>
-                <input
-                  ref={importFileRef}
-                  type="file"
-                  accept=".json,application/json"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) void importWorkspace(file);
-                    e.currentTarget.value = '';
-                  }}
-                />
-              </div>
-              <div className="mt-2 flex gap-1">
-                <select
-                  value={lessonPreset}
-                  onChange={(e) => setLessonPreset(e.target.value as 'none' | 'pro-vocal-chain')}
-                  className="flex-1 rounded border border-white/20 bg-black/30 px-2 py-1 text-[10px]"
-                >
-                  <option value="none">Lessons</option>
-                  <option value="pro-vocal-chain">Lesson 1: Pro Vocal Chain</option>
-                </select>
-                <button
-                  type="button"
-                  onClick={loadLesson}
-                  className="rounded border border-violet-300/40 bg-violet-900/25 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-violet-100 hover:bg-violet-900/40"
-                >
-                  Load
-                </button>
-              </div>
-            </div>
-          )}
-          {showLeftSidebar && <EquipmentLibraryPanel onAddEquipment={(defId) => ws.addNode(defId)} />}
-        </div>
-
-        <div className="relative min-h-0 min-w-0 flex-1">
           <Renderer
             state={state}
             zoom={zoom}
@@ -593,6 +606,9 @@ const Lab: React.FC = () => {
             onCanvasReady={(el) => {
               canvasElementRef.current = el;
             }}
+            onViewportWorldSize={(vw, vh) => {
+              viewportMetricsRef.current = { w: vw, h: vh };
+            }}
             selectedCableId={selectedCableId}
             onSelectCable={setSelectedCableId}
             onPortMouseDown={(nodeId, portId, signalType) => {
@@ -602,7 +618,7 @@ const Lab: React.FC = () => {
                 signalType,
               });
             }}
-            onPortMouseUp={(fromNodeId, fromPortId) => {
+            onPortMouseUp={(fromNodeId, fromPortId, _toNodeId, _toPortId) => {
               setPendingCable((prev) =>
                 prev &&
                 prev.fromNodeId === fromNodeId &&
@@ -612,14 +628,7 @@ const Lab: React.FC = () => {
               );
             }}
           />
-          <button
-            type="button"
-            onClick={() => setShowLeftSidebar((v) => !v)}
-            className="absolute left-0 top-1/2 z-30 -translate-y-1/2 rounded-r border border-white/15 bg-black/70 px-1.5 py-3 text-[10px] font-bold"
-            aria-label={showLeftSidebar ? 'Hide equipment sidebar' : 'Show equipment sidebar'}
-          >
-            {showLeftSidebar ? '<' : '>'}
-          </button>
+          <StudioGearPickers onPick={(defId) => void ws.addNode(defId)} />
           <button
             type="button"
             onClick={() => setShowRightSidebar((v) => !v)}
@@ -744,43 +753,58 @@ const Lab: React.FC = () => {
         </div>
       </div>
 
+      <ProfessionalMixerConsole />
+
       <footer className="flex h-10 shrink-0 items-center gap-6 border-t border-white/10 bg-[#141414] px-4">
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={handlePlay}
-            className="rounded bg-emerald-700 px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white hover:bg-emerald-600"
+            onClick={clearWorkspace}
+            className="rounded border border-red-500/35 bg-red-950/30 px-2 py-1 text-[9px] font-bold uppercase text-red-100 hover:bg-red-900/45"
           >
-            Play
+            Clear
           </button>
           <button
             type="button"
-            onClick={handleStop}
-            className="rounded bg-red-900/80 px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white hover:bg-red-800"
+            onClick={exportWorkspace}
+            className="rounded border border-blue-400/35 bg-blue-950/25 px-2 py-1 text-[9px] font-bold uppercase text-blue-100 hover:bg-blue-900/40"
           >
-            Stop
-          </button>
-          <span className="font-mono text-[9px] text-[#666]">
-            {engineRunning ? 'RUNNING' : 'SUSPENDED'}
-          </span>
-          {pendingCable && (
-            <span className="font-mono text-[9px] text-[#889]">
-              PATCHING {pendingCable.signalType.toUpperCase()}
-            </span>
-          )}
-          <button
-            type="button"
-            onClick={() => setSfvMode((v) => !v)}
-            className={`rounded border px-2 py-1 text-[9px] font-bold uppercase ${sfvMode ? 'border-emerald-400 bg-emerald-900/40 text-emerald-100' : 'border-white/20 bg-black/20 text-white/70'}`}
-          >
-            SFV
+            Export
           </button>
           <button
             type="button"
-            onClick={() => setBlueprintMode((v) => !v)}
-            className={`rounded border px-2 py-1 text-[9px] font-bold uppercase ${blueprintMode ? 'border-sky-400 bg-sky-900/40 text-sky-100' : 'border-white/20 bg-black/20 text-white/70'}`}
+            onClick={() => importFileRef.current?.click()}
+            className="rounded border border-emerald-400/35 bg-emerald-950/25 px-2 py-1 text-[9px] font-bold uppercase text-emerald-100 hover:bg-emerald-900/40"
           >
-            Blueprint
+            Import
+          </button>
+          <input
+            ref={importFileRef}
+            type="file"
+            accept=".json,application/json"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void importWorkspace(file);
+              e.currentTarget.value = '';
+            }}
+          />
+          <select
+            value={lessonPreset}
+            onChange={(e) =>
+              setLessonPreset(e.target.value as 'none' | 'pro-vocal-chain')
+            }
+            className="max-w-[10rem] rounded border border-white/15 bg-black/40 px-1.5 py-1 text-[9px] text-white/90"
+          >
+            <option value="none">Lessons</option>
+            <option value="pro-vocal-chain">Pro Vocal Chain</option>
+          </select>
+          <button
+            type="button"
+            onClick={loadLesson}
+            className="rounded border border-violet-400/35 bg-violet-950/30 px-2 py-1 text-[9px] font-bold uppercase text-violet-100 hover:bg-violet-900/45"
+          >
+            Load
           </button>
         </div>
         <div className="ml-auto flex items-center gap-3">

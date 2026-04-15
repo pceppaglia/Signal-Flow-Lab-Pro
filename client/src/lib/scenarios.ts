@@ -1,4 +1,26 @@
 import type { EquipmentNode } from '../../../shared/equipment-types';
+import { equipmentLibrary } from '@/lib/equipment-library';
+import { getStudioZones } from '@/lib/studio-layout';
+
+/**
+ * World size used to compute rack `x` for scenario nodes. `rackLeft` = `(vw - 600) / 2`.
+ * At 2600×800 this is **1000**; if your Lab `onViewportWorldSize` reports a different `vw`,
+ * set this to match so rack gear spawns aligned with the 600px bay.
+ */
+const SCENARIO_AUTHORING_VW = 2600;
+const SCENARIO_AUTHORING_VH = 800;
+
+const RACK_LEFT_X = Math.round(
+  getStudioZones(SCENARIO_AUTHORING_VW, SCENARIO_AUTHORING_VH).rackLeft
+);
+
+function withRackLeftX(nodes: EquipmentNode[]): EquipmentNode[] {
+  return nodes.map((n) => {
+    const def = equipmentLibrary.find((d) => d.id === n.defId);
+    if (!def || def.heightUnits <= 0) return n;
+    return { ...n, x: RACK_LEFT_X };
+  });
+}
 
 export interface ScenarioDef {
   id: string;
@@ -24,11 +46,11 @@ export const scenarios: ScenarioDef[] = [
       { id: 'wire-pre-interface', description: 'Patch Neve 1073 line output to interface input', hint: 'The preamp output is line-level and should feed interface line or instrument input.' },
       { id: 'set-gain', description: 'Set 1073 gain into healthy range', hint: 'Aim for solid signal without clipping. Engineer target: controlled green/orange meter activity.' },
     ],
-    initialNodes: [
+    initialNodes: withRackLeftX([
       { id: 'l1-vocal-src', defId: 'vocal-track-src', x: 80, y: 360, rotation: 0, state: {} },
       { id: 'l1-neve', defId: 'neve-1073', x: 300, y: 44, rotation: 0, state: { phantomPower: true, phantom: true, gain: 45 } },
       { id: 'l1-interface', defId: 'ua-interface', x: 300, y: 132, rotation: 0, state: {} },
-    ],
+    ]),
     hints: [
       'Follow source -> preamp -> converter in order.',
       'Mic-level requires proper preamp staging.',
@@ -46,12 +68,12 @@ export const scenarios: ScenarioDef[] = [
       { id: 'patch-bass-path', description: 'Route Bass DI Source directly to interface line path', hint: 'Bass DI is already line-level and usually needs less preamp gain.' },
       { id: 'compare-levels', description: 'Compare meter response between both paths', hint: 'Observe how line-level arrives hotter with less gain required.' },
     ],
-    initialNodes: [
+    initialNodes: withRackLeftX([
       { id: 'l2-kick-src', defId: 'kick-drum-src', x: 70, y: 280, rotation: 0, state: {} },
       { id: 'l2-bass-src', defId: 'bass-guitar-src', x: 70, y: 430, rotation: 0, state: {} },
       { id: 'l2-neve', defId: 'neve-1073', x: 300, y: 88, rotation: 0, state: { phantomPower: true, phantom: true, gain: 50 } },
       { id: 'l2-interface', defId: 'ua-interface', x: 300, y: 176, rotation: 0, state: {} },
-    ],
+    ]),
     hints: [
       'Mic sources need proper preamp gain.',
       'Line DI paths can overload if treated like mic sources.',
@@ -69,11 +91,11 @@ export const scenarios: ScenarioDef[] = [
       { id: 'patch-pultec-interface', description: 'Patch EQP-1A out to interface', hint: 'Use line path out of the EQ into the interface.' },
       { id: 'set-pultec', description: 'Dial the classic low-end contour', hint: 'Try modest LF boost and attenuation together for the famous Pultec contour.' },
     ],
-    initialNodes: [
+    initialNodes: withRackLeftX([
       { id: 'l3-kick-src', defId: 'kick-drum-src', x: 70, y: 340, rotation: 0, state: {} },
       { id: 'l3-pultec', defId: 'pultec-eqp1a', x: 300, y: 44, rotation: 0, state: {} },
       { id: 'l3-interface', defId: 'ua-interface', x: 300, y: 176, rotation: 0, state: {} },
-    ],
+    ]),
     hints: [
       'Pultec curves are broad and musical.',
       'Small boosts go a long way on kick fundamentals.',
@@ -91,12 +113,12 @@ export const scenarios: ScenarioDef[] = [
       { id: 'patch-1176-la2a', description: 'Patch 1176 output to LA-2A input', hint: 'Fast stage first, smooth stage second.' },
       { id: 'patch-la2a-interface', description: 'Patch LA-2A output to interface', hint: 'Deliver a stable, reduced dynamic vocal to converter.' },
     ],
-    initialNodes: [
+    initialNodes: withRackLeftX([
       { id: 'l4-vocal-src', defId: 'vocal-track-src', x: 80, y: 390, rotation: 0, state: {} },
       { id: 'l4-1176', defId: '1176-peak-limiter', x: 300, y: 44, rotation: 0, state: {} },
       { id: 'l4-la2a', defId: 'la-2a-leveling', x: 300, y: 132, rotation: 0, state: {} },
       { id: 'l4-interface', defId: 'ua-interface', x: 300, y: 264, rotation: 0, state: {} },
-    ],
+    ]),
     hints: [
       'Use 1176 for transient containment.',
       'Use LA-2A for smooth RMS-style leveling.',
@@ -114,12 +136,12 @@ export const scenarios: ScenarioDef[] = [
       { id: 'patch-neve-ssl', description: 'Patch Neve line output to SSL Bus Comp input', hint: 'Use line-level path between processing units.' },
       { id: 'patch-ssl-interface', description: 'Patch SSL Bus Comp output to interface', hint: 'Deliver controlled vocal to converter for recording.' },
     ],
-    initialNodes: [
+    initialNodes: withRackLeftX([
       { id: 'l5-u87', defId: 'u87-condenser', x: 90, y: 380, rotation: 0, state: {} },
       { id: 'l5-neve', defId: 'neve-1073', x: 300, y: 44, rotation: 0, state: { phantomPower: true, phantom: true, gain: 46 } },
       { id: 'l5-ssl', defId: 'ssl-bus-comp', x: 300, y: 88, rotation: 0, state: {} },
       { id: 'l5-interface', defId: 'ua-interface', x: 300, y: 176, rotation: 0, state: {} },
-    ],
+    ]),
     hints: [
       'Condenser mics require phantom power through a mic preamp.',
       'Set compressor threshold after establishing preamp gain staging.',

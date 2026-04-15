@@ -1,9 +1,13 @@
 import React from 'react';
-import { Switch, Route } from "wouter";
-import { Toaster } from "@/components/ui/sonner";
-import NotFound from "@/pages/NotFound";
+import { Switch, Route } from 'wouter';
+import { Toaster } from '@/components/ui/sonner';
+import NotFound from '@/pages/NotFound';
 import Home from './pages/Home';
 import Lab from './components/studio/Lab';
+import {
+  StudioHeaderProvider,
+  useStudioHeaderRightSlot,
+} from '@/contexts/StudioHeaderContext';
 
 /**
  * Signal Flow Lab Pro - Main Application Entry
@@ -19,30 +23,46 @@ function Router() {
   );
 }
 
+function StudioHeaderBar() {
+  const headerRight = useStudioHeaderRightSlot();
+
+  return (
+    <header className="fixed top-0 left-0 right-0 z-50 h-[52px] border-b border-white/5 bg-black/55 backdrop-blur-md">
+      <div className="flex h-full items-center justify-between gap-4 px-4">
+        <div className="pointer-events-auto flex min-w-0 flex-1 items-center gap-3">
+          <div
+            className="h-2 w-2 shrink-0 rounded-full bg-[#E8A020] animate-pulse"
+            aria-hidden
+          />
+          <div className="flex min-w-0 flex-col gap-0.5 leading-none sm:flex-row sm:items-baseline sm:gap-3">
+            <span className="font-serif text-lg tracking-tight text-white">
+              <span className="italic">RecordingStudio</span>
+              <span className="italic text-[#d4af37]">.com</span>
+            </span>
+            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/40">
+              Signal Flow Lab Pro v3.0
+            </span>
+          </div>
+        </div>
+        <div className="pointer-events-auto flex shrink-0 items-center justify-end gap-2">
+          {headerRight}
+        </div>
+      </div>
+    </header>
+  );
+}
+
 function App() {
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white selection:bg-[#E8A020]/30 overflow-hidden">
-      {/* Global Studio Header */}
-      <header className="fixed top-0 left-0 right-0 h-10 bg-black/40 backdrop-blur-md border-b border-white/5 z-50 flex items-center px-4 justify-between pointer-events-none">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-[#E8A020] animate-pulse" />
-          <span className="text-[10px] font-bold tracking-[0.2em] text-gray-400 uppercase">
-            Signal Flow Lab <span className="text-white">Pro v2.0</span>
-          </span>
-        </div>
-        <div className="text-[9px] font-mono text-gray-600">
-          SYSTEM STATUS: ONLINE // 48-CHAN SOVEREIGN READY
-        </div>
-      </header>
-
-      {/* Main Routing Context */}
-      <main className="h-screen w-screen pt-10">
-        <Router />
-      </main>
-
-      {/* Global Notifications */}
-      <Toaster />
-    </div>
+    <StudioHeaderProvider>
+      <div className="min-h-screen overflow-hidden bg-[#0a0a0a] text-white selection:bg-[#E8A020]/30">
+        <StudioHeaderBar />
+        <main className="h-screen w-screen pt-[52px]">
+          <Router />
+        </main>
+        <Toaster />
+      </div>
+    </StudioHeaderProvider>
   );
 }
 
