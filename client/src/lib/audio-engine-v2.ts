@@ -12,6 +12,9 @@ export interface AudioNodeInstance {
   outputNode: GainNode;     // Modular Patch Output Point
   oscillator?: OscillatorNode;
   bufferSource?: AudioBufferSourceNode;
+  oscMixNode?: GainNode;
+  noiseMixNode?: GainNode;
+  saturator?: WaveShaperNode;
   gainNode: GainNode;       // Equipment Internal Gain Control
   filterNode?: BiquadFilterNode;
   analyser?: AnalyserNode;
@@ -25,6 +28,7 @@ export interface AudioEngineState {
 }
 
 class AudioEngineV2 {
+  private static instance: AudioEngineV2 | null = null;
   private ctx: AudioContext | null = null;
   private nodeRegistry: Map<string, AudioNodeInstance> = new Map();
   private masterGain: GainNode | null = null;
@@ -42,10 +46,20 @@ class AudioEngineV2 {
     { defId: string; state: Record<string, unknown> }
   > = new Map();
   private micToPreampLinks: Map<string, Set<string>> = new Map();
+  private meterBuffers: Map<string, Float32Array> = new Map();
+  private autoResumeBound = false;
 
   get isRunning() { return this._isRunning; }
   get audioContext() { return this.ctx; }
   get analyserNode() { return this.masterAnalyser; }
+
+  static getInstance(): AudioEngineV2 {
+    if (!AudioEngineV2.instance) {
+      AudioEngineV2.instance = new AudioEngineV2();
+    }
+    AudioEngineV2.instance.bindAutoResumeOnFirstGesture();
+    return AudioEngineV2.instance;
+  }
 
   /** Last gain stage before `AudioContext.destination` — use as the single master bus output tap. */
   get masterOutput(): GainNode | null {
@@ -63,6 +77,7 @@ class AudioEngineV2 {
         sampleRate: 48000
       });
     }
+    this.bindAutoResumeOnFirstGesture();
 
     // --- BROWSER SECURITY FIX ---
     // Modern browsers require an explicit resume() call triggered by a user event.
@@ -109,6 +124,7 @@ class AudioEngineV2 {
 
     this.nodeRegistry.clear();
     this.nodeProfiles.clear();
+    this.meterBuffers.clear();
     this.micToPreampLinks.clear();
     this.auxBusses.clear();
     this.auxReturns.clear();
@@ -174,6 +190,37 @@ class AudioEngineV2 {
     this.outputGate.connect(this.ctx.destination);
   }
 
+  private bindAutoResumeOnFirstGesture(): void {
+    if (this.autoResumeBound || typeof window === 'undefined') return;
+    this.autoResumeBound = true;
+
+    const resumeOnGesture = async () => {
+      const ctx = this.ctx;
+      if (!ctx) {
+        try {
+          await this.start();
+        } catch {
+          // Wait for the next gesture if initialization fails.
+        }
+      } else if (ctx.state === 'suspended') {
+        try {
+          await ctx.resume();
+        } catch {
+          // Resume can fail if browser policy still blocks; keep listeners alive.
+          return;
+        }
+      }
+      this.connectMasterOutputToDestination();
+      window.removeEventListener('pointerdown', resumeOnGesture);
+      window.removeEventListener('keydown', resumeOnGesture);
+      window.removeEventListener('touchstart', resumeOnGesture);
+    };
+
+    window.addEventListener('pointerdown', resumeOnGesture, { passive: true });
+    window.addEventListener('keydown', resumeOnGesture, { passive: true });
+    window.addEventListener('touchstart', resumeOnGesture, { passive: true });
+  }
+
   /**
    * Creates a Source Node (Oscillator or Noise Generator).
    * Restores all waveform types: sine, square, sawtooth, triangle, noise.
@@ -200,24 +247,36 @@ class AudioEngineV2 {
       gainNode,
     };
 
-    if (type === 'noise') {
-      const bufferSource = this.ctx.createBufferSource();
-      bufferSource.buffer = this.noiseBuffer;
-      bufferSource.loop = true;
-      bufferSource.connect(gainNode);
-      bufferSource.start();
-      instance.bufferSource = bufferSource;
-    } else {
-      const oscillator = this.ctx.createOscillator();
-      oscillator.type = type as OscillatorType;
-      oscillator.frequency.value = 1000;
-      oscillator.connect(gainNode);
-      oscillator.start();
-      instance.oscillator = oscillator;
-    }
+    const oscMixNode = this.ctx.createGain();
+    const noiseMixNode = this.ctx.createGain();
+    instance.oscMixNode = oscMixNode;
+    instance.noiseMixNode = noiseMixNode;
+
+    const oscillator = this.ctx.createOscillator();
+    oscillator.type = type === 'noise' ? 'sine' : (type as OscillatorType);
+    oscillator.frequency.value = 1000;
+    oscillator.connect(oscMixNode);
+    oscillator.start();
+    instance.oscillator = oscillator;
+
+    const bufferSource = this.ctx.createBufferSource();
+    bufferSource.buffer = this.noiseBuffer;
+    bufferSource.loop = true;
+    bufferSource.connect(noiseMixNode);
+    bufferSource.start();
+    instance.bufferSource = bufferSource;
+
+    oscMixNode.connect(gainNode);
+    noiseMixNode.connect(gainNode);
+    this.applySourceBlend(instance, type === 'noise' ? 'noise' : 'osc');
 
     // Internal Path: [Source] -> gainNode -> outputNode
     gainNode.connect(outputNode);
+    const analyser = this.ctx.createAnalyser();
+    analyser.fftSize = 1024;
+    analyser.smoothingTimeConstant = 0.65;
+    outputNode.connect(analyser);
+    instance.analyser = analyser;
 
     // Default Connection: Monitors are connected to master bus by default
     outputNode.connect(this.masterGain);
@@ -229,7 +288,7 @@ class AudioEngineV2 {
   /**
    * Passthrough patch point (e.g. preamp, EQ): input → gain → output → master until repatched.
    */
-  ensurePatchNode(nodeId: string): AudioNodeInstance | null {
+  ensurePatchNode(nodeId: string, defId?: string): AudioNodeInstance | null {
     if (!this.ctx || !this.masterGain) return null;
     const existing = this.nodeRegistry.get(nodeId);
     if (existing) return existing;
@@ -238,8 +297,22 @@ class AudioEngineV2 {
     const outputNode = this.ctx.createGain();
     const gainNode = this.ctx.createGain();
     gainNode.gain.value = 1;
+    const saturator = this.ctx.createWaveShaper();
+    saturator.curve = this.makeClipCurve(28);
+    saturator.oversample = '2x';
     inputNode.connect(gainNode);
-    gainNode.connect(outputNode);
+    const shouldSaturate =
+      defId === 'neve-1073' || defId === 'ssl-bus-comp';
+    if (shouldSaturate) {
+      gainNode.connect(saturator);
+      saturator.connect(outputNode);
+    } else {
+      gainNode.connect(outputNode);
+    }
+    const analyser = this.ctx.createAnalyser();
+    analyser.fftSize = 1024;
+    analyser.smoothingTimeConstant = 0.65;
+    outputNode.connect(analyser);
     outputNode.connect(this.masterGain);
 
     const instance: AudioNodeInstance = {
@@ -247,6 +320,8 @@ class AudioEngineV2 {
       inputNode,
       outputNode,
       gainNode,
+      analyser,
+      saturator: shouldSaturate ? saturator : undefined,
     };
     this.nodeRegistry.set(nodeId, instance);
     return instance;
@@ -268,6 +343,8 @@ class AudioEngineV2 {
       node.inputNode.disconnect();
       node.outputNode.disconnect();
       node.gainNode.disconnect();
+      node.oscMixNode?.disconnect();
+      node.noiseMixNode?.disconnect();
       node.filterNode?.disconnect();
       node.analyser?.disconnect();
     } catch (e) {
@@ -276,6 +353,7 @@ class AudioEngineV2 {
     
     this.nodeRegistry.delete(nodeId);
     this.nodeProfiles.delete(nodeId);
+    this.meterBuffers.delete(nodeId);
     this.micToPreampLinks.delete(nodeId);
     this.micToPreampLinks.forEach((preampIds) => preampIds.delete(nodeId));
   }
@@ -284,7 +362,12 @@ class AudioEngineV2 {
    * Logical Patching: Physically routes audio from one equipment unit to another.
    * Used by the Cable connection logic.
    */
-  connectNodes(fromId: string, toId: string): void {
+  connectNodes(
+    fromId: string,
+    toId: string,
+    fromPortId?: string,
+    toPortId?: string
+  ): void {
     const from = this.nodeRegistry.get(fromId);
     const to = this.nodeRegistry.get(toId);
 
@@ -295,10 +378,63 @@ class AudioEngineV2 {
       } catch(e) {
         // Already disconnected or not connected to master
       }
-      from.outputNode.connect(to.inputNode);
+      if (this.canPassConnection(fromId, toId, fromPortId, toPortId)) {
+        from.outputNode.connect(to.inputNode);
+      } else {
+        from.outputNode.connect(this.masterGain!);
+      }
       this.trackMicToPreampConnection(fromId, toId);
       this.applyMicPhantomRule(fromId, toId);
     }
+  }
+
+  syncConnections(
+    links: Array<{
+      fromNodeId: string;
+      toNodeId: string;
+      fromPortId?: string;
+      toPortId?: string;
+    }>
+  ): void {
+    if (!this.masterGain) return;
+    const nodeIds = new Set(this.nodeRegistry.keys());
+
+    nodeIds.forEach((id) => {
+      const inst = this.nodeRegistry.get(id);
+      if (!inst) return;
+      try {
+        inst.outputNode.disconnect();
+      } catch {
+        // no-op
+      }
+      inst.outputNode.connect(this.masterGain!);
+      if (inst.analyser) {
+        try {
+          inst.outputNode.disconnect(inst.analyser);
+        } catch {
+          // no-op
+        }
+        inst.outputNode.connect(inst.analyser);
+      }
+    });
+
+    links.forEach((link) => {
+      const from = this.nodeRegistry.get(link.fromNodeId);
+      const to = this.nodeRegistry.get(link.toNodeId);
+      if (!from || !to) return;
+      try {
+        from.outputNode.disconnect(this.masterGain!);
+      } catch {
+        // no-op
+      }
+      if (this.canPassConnection(link.fromNodeId, link.toNodeId, link.fromPortId, link.toPortId)) {
+        from.outputNode.connect(to.inputNode);
+      } else {
+        from.outputNode.connect(this.masterGain!);
+      }
+      this.trackMicToPreampConnection(link.fromNodeId, link.toNodeId);
+      this.applyMicPhantomRule(link.fromNodeId, link.toNodeId);
+    });
   }
 
   registerNodeProfile(
@@ -315,7 +451,7 @@ class AudioEngineV2 {
     profile.state = { ...profile.state, [key]: value };
     this.nodeProfiles.set(nodeId, profile);
 
-    if (key === 'phantom') {
+    if (key === 'phantom' || key === 'phantomPower') {
       this.refreshLinkedMicrophonesForPreamp(nodeId);
     }
   }
@@ -325,7 +461,7 @@ class AudioEngineV2 {
   setFrequency(nodeId: string, freq: number): void {
     const node = this.nodeRegistry.get(nodeId);
     if (node?.oscillator && this.ctx) {
-      node.oscillator.frequency.setTargetAtTime(freq, this.ctx.currentTime, 0.02);
+      node.oscillator.frequency.setTargetAtTime(freq, this.ctx.currentTime, 0.008);
     }
   }
 
@@ -336,11 +472,29 @@ class AudioEngineV2 {
     }
   }
 
+  setSourceMode(
+    nodeId: string,
+    mode: 'sine' | 'square' | 'sawtooth' | 'triangle' | 'noise'
+  ): void {
+    const node = this.nodeRegistry.get(nodeId);
+    if (!node?.oscillator) return;
+    if (mode === 'noise') {
+      this.applySourceBlend(node, 'noise');
+      return;
+    }
+    node.oscillator.type = mode;
+    this.applySourceBlend(node, 'osc');
+  }
+
   setNodeGain(nodeId: string, value: number): void {
     const node = this.nodeRegistry.get(nodeId);
     if (node && this.ctx) {
       const safeValue = Math.max(0, Math.min(1, value));
       node.gainNode.gain.setTargetAtTime(safeValue, this.ctx.currentTime, 0.02);
+      if (node.saturator) {
+        const drive = safeValue > 0.8 ? 48 + (safeValue - 0.8) * 220 : 28;
+        node.saturator.curve = this.makeClipCurve(drive);
+      }
     }
   }
 
@@ -395,6 +549,42 @@ class AudioEngineV2 {
       const safeValue = Math.max(0, Math.min(1, value));
       auxReturn.gain.setTargetAtTime(safeValue, this.ctx.currentTime, 0.02);
     }
+  }
+
+  getMeterLevel(nodeId: string): number {
+    const node = this.nodeRegistry.get(nodeId);
+    if (!node?.analyser) return 0;
+    const analyser = node.analyser;
+    const data = this.meterBuffers.get(nodeId) ?? new Float32Array(analyser.fftSize);
+    if (!this.meterBuffers.has(nodeId)) {
+      this.meterBuffers.set(nodeId, data);
+    }
+    analyser.getFloatTimeDomainData(data);
+    let peak = 0;
+    let sum = 0;
+    for (let i = 0; i < data.length; i += 1) {
+      const sample = Math.abs(data[i]);
+      if (sample > peak) peak = sample;
+      sum += data[i] * data[i];
+    }
+    const rms = Math.sqrt(sum / data.length);
+    return Math.max(0, Math.min(1, Math.max(peak * 0.8, rms * 1.6)));
+  }
+
+  isNodeClipping(nodeId: string): boolean {
+    const node = this.nodeRegistry.get(nodeId);
+    if (!node?.analyser) return false;
+    const analyser = node.analyser;
+    const data = this.meterBuffers.get(nodeId) ?? new Float32Array(analyser.fftSize);
+    if (!this.meterBuffers.has(nodeId)) {
+      this.meterBuffers.set(nodeId, data);
+    }
+    analyser.getFloatTimeDomainData(data);
+    let peak = 0;
+    for (let i = 0; i < data.length; i += 1) {
+      peak = Math.max(peak, Math.abs(data[i]));
+    }
+    return peak >= 0.985;
   }
 
   // --- METERING & DSP DATA ---
@@ -477,6 +667,18 @@ class AudioEngineV2 {
     return curve;
   }
 
+  private applySourceBlend(
+    node: AudioNodeInstance,
+    mode: 'osc' | 'noise'
+  ): void {
+    if (!this.ctx || !node.oscMixNode || !node.noiseMixNode) return;
+    const t = this.ctx.currentTime;
+    node.oscMixNode.gain.cancelScheduledValues(t);
+    node.noiseMixNode.gain.cancelScheduledValues(t);
+    node.oscMixNode.gain.setTargetAtTime(mode === 'osc' ? 1 : 0, t, 0.02);
+    node.noiseMixNode.gain.setTargetAtTime(mode === 'noise' ? 1 : 0, t, 0.02);
+  }
+
   private trackMicToPreampConnection(fromId: string, toId: string): void {
     const fromProfile = this.nodeProfiles.get(fromId);
     const toProfile = this.nodeProfiles.get(toId);
@@ -499,10 +701,33 @@ class AudioEngineV2 {
     const toDef = equipmentLibrary.find((def) => def.id === toProfile.defId);
     if (!toDef) return;
 
-    if (!this.isCondenserMic(fromId) || toDef.category !== 'preamp') return;
+    if (toDef.category !== 'preamp') return;
 
-    const phantomEnabled = toProfile.state.phantom === true;
+    const phantomEnabled =
+      toProfile.state.phantomPower === true || toProfile.state.phantom === true;
     this.setNodeGain(fromId, phantomEnabled ? 1 : 0);
+  }
+
+  private canPassConnection(
+    fromId: string,
+    toId: string,
+    fromPortId?: string,
+    toPortId?: string
+  ): boolean {
+    if (!fromPortId || !toPortId) return true;
+    const fromProfile = this.nodeProfiles.get(fromId);
+    const toProfile = this.nodeProfiles.get(toId);
+    if (!fromProfile || !toProfile) return true;
+    const fromDef = equipmentLibrary.find((d) => d.id === fromProfile.defId);
+    const toDef = equipmentLibrary.find((d) => d.id === toProfile.defId);
+    if (!fromDef || !toDef) return true;
+    const fromPort = fromDef.outputs.find((p) => p.id === fromPortId);
+    const toPort = toDef.inputs.find((p) => p.id === toPortId);
+    if (!fromPort || !toPort) return true;
+    if (fromPort.type === 'mic' && toPort.type === 'mic' && toDef.category === 'preamp') {
+      return toProfile.state.phantomPower === true || toProfile.state.phantom === true;
+    }
+    return true;
   }
 
   private isCondenserMic(nodeId: string): boolean {
@@ -523,4 +748,4 @@ class AudioEngineV2 {
   }
 }
 
-export const audioEngine = new AudioEngineV2();
+export const audioEngine = AudioEngineV2.getInstance();

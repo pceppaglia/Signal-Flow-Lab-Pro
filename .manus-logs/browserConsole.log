@@ -207,3 +207,202 @@
 [2026-04-15T03:40:48.951Z] {"timestamp":1776224446310,"level":"DEBUG","args":["[Manus] Debug collector initialized (no rrweb, UI events only)"],"stack":null}
 [2026-04-15T03:40:48.951Z] {"timestamp":1776224446314,"level":"DEBUG","args":["[vite] connected."],"stack":null}
 [2026-04-15T03:40:48.951Z] {"timestamp":1776224446722,"level":"INFO","args":["%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools","font-weight:bold"],"stack":null}
+[2026-04-15T10:30:21.908Z] {"timestamp":1776247987166,"level":"LOG","args":["[vite] server connection lost. Polling for restart..."],"stack":null}
+[2026-04-15T10:30:26.228Z] {"timestamp":1776249024224,"level":"DEBUG","args":["[Manus] Debug collector initialized (no rrweb, UI events only)"],"stack":null}
+[2026-04-15T10:30:26.228Z] {"timestamp":1776249025437,"level":"INFO","args":["%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools","font-weight:bold"],"stack":null}
+[2026-04-15T10:30:28.232Z] {"timestamp":1776249028128,"level":"DEBUG","args":["[vite] connected."],"stack":null}
+[2026-04-15T10:50:38.277Z] {"timestamp":1776250236743,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T10:50:38.277Z] {"timestamp":1776250236743,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T10:50:52.278Z] {"timestamp":1776250250710,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T10:50:52.278Z] {"timestamp":1776250250710,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T10:50:52.278Z] {"timestamp":1776250250710,"level":"DEBUG","args":["[vite]","hot updated: /src/components/ProfessionalMixerConsole.tsx"],"stack":null}
+[2026-04-15T10:50:52.278Z] {"timestamp":1776250250710,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T10:50:52.278Z] {"timestamp":1776250250711,"level":"DEBUG","args":["[vite]","hot updated: /src/components/EquipmentLibraryPanel.tsx"],"stack":null}
+[2026-04-15T10:50:52.278Z] {"timestamp":1776250250711,"level":"DEBUG","args":["[vite]","hot updated: /src/components/Meters.tsx"],"stack":null}
+[2026-04-15T10:50:52.278Z] {"timestamp":1776250250711,"level":"DEBUG","args":["[vite]","hot updated: /src/components/SafetyWarnings.tsx"],"stack":null}
+[2026-04-15T10:51:00.277Z] {"timestamp":1776250259374,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T10:51:00.277Z] {"timestamp":1776250259374,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T10:51:00.277Z] {"timestamp":1776250259374,"level":"DEBUG","args":["[vite]","hot updated: /src/components/Meters.tsx"],"stack":null}
+[2026-04-15T10:51:12.277Z] {"timestamp":1776250270856,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T10:51:12.277Z] {"timestamp":1776250270856,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T10:51:40.277Z] {"timestamp":1776250298680,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T10:51:40.277Z] {"timestamp":1776250298681,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T10:51:46.276Z] {"timestamp":1776250304415,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T10:51:46.276Z] {"timestamp":1776250304415,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T10:51:46.276Z] {"timestamp":1776250306120,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T10:51:46.276Z] {"timestamp":1776250306120,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T10:52:18.276Z] {"timestamp":1776250337294,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T10:52:18.276Z] {"timestamp":1776250337294,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T10:52:22.277Z] {"timestamp":1776250340298,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T10:52:22.277Z] {"timestamp":1776250340298,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T11:06:56.269Z] {"timestamp":1776251214340,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T11:06:56.269Z] {"timestamp":1776251214340,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T11:06:56.269Z] {"timestamp":1776251214341,"level":"DEBUG","args":["[vite]","hot updated: /src/components/Meters.tsx"],"stack":null}
+[2026-04-15T11:07:00.268Z] {"timestamp":1776251218890,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T11:07:00.268Z] {"timestamp":1776251218890,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T11:07:00.268Z] {"timestamp":1776251218890,"level":"DEBUG","args":["[vite]","hot updated: /src/components/Meters.tsx"],"stack":null}
+[2026-04-15T11:07:04.269Z] {"timestamp":1776251222784,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T11:07:04.269Z] {"timestamp":1776251222784,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T11:07:04.269Z] {"timestamp":1776251222784,"level":"DEBUG","args":["[vite]","hot updated: /src/components/Meters.tsx"],"stack":null}
+[2026-04-15T11:07:06.268Z] {"timestamp":1776251225955,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T11:07:06.268Z] {"timestamp":1776251225955,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T11:07:06.268Z] {"timestamp":1776251225955,"level":"DEBUG","args":["[vite]","hot updated: /src/components/Meters.tsx"],"stack":null}
+[2026-04-15T11:07:10.268Z] {"timestamp":1776251229112,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T11:07:10.268Z] {"timestamp":1776251229112,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T11:07:10.268Z] {"timestamp":1776251229112,"level":"DEBUG","args":["[vite]","hot updated: /src/components/Meters.tsx"],"stack":null}
+[2026-04-15T11:07:16.269Z] {"timestamp":1776251234459,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T11:07:16.269Z] {"timestamp":1776251234459,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T11:07:16.269Z] {"timestamp":1776251234560,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T11:07:16.269Z] {"timestamp":1776251234560,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T11:07:38.269Z] {"timestamp":1776251256925,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T11:07:38.269Z] {"timestamp":1776251256925,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T11:07:42.269Z] {"timestamp":1776251260525,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T11:07:42.269Z] {"timestamp":1776251260525,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T11:07:56.267Z] {"timestamp":1776251275333,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T11:07:56.267Z] {"timestamp":1776251275333,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T11:07:56.267Z] {"timestamp":1776251275333,"level":"DEBUG","args":["[vite]","hot updated: /src/components/ProfessionalMixerConsole.tsx"],"stack":null}
+[2026-04-15T11:07:56.267Z] {"timestamp":1776251275333,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T11:07:56.267Z] {"timestamp":1776251275333,"level":"DEBUG","args":["[vite]","hot updated: /src/components/EquipmentLibraryPanel.tsx"],"stack":null}
+[2026-04-15T11:07:56.267Z] {"timestamp":1776251275333,"level":"DEBUG","args":["[vite]","hot updated: /src/components/Meters.tsx"],"stack":null}
+[2026-04-15T11:07:56.267Z] {"timestamp":1776251275333,"level":"DEBUG","args":["[vite]","hot updated: /src/components/SafetyWarnings.tsx"],"stack":null}
+[2026-04-15T11:08:04.268Z] {"timestamp":1776251283157,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T11:08:04.268Z] {"timestamp":1776251283157,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T11:17:26.322Z] {"timestamp":1776251846011,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T11:17:26.322Z] {"timestamp":1776251846011,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T11:17:26.322Z] {"timestamp":1776251846011,"level":"DEBUG","args":["[vite]","hot updated: /src/components/Meters.tsx"],"stack":null}
+[2026-04-15T11:17:32.323Z] {"timestamp":1776251851530,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T11:17:32.323Z] {"timestamp":1776251851530,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T11:17:32.323Z] {"timestamp":1776251851530,"level":"DEBUG","args":["[vite]","hot updated: /src/components/Meters.tsx"],"stack":null}
+[2026-04-15T11:17:38.322Z] {"timestamp":1776251856497,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T11:17:38.322Z] {"timestamp":1776251856497,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T11:17:44.321Z] {"timestamp":1776251864116,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T11:17:44.321Z] {"timestamp":1776251864116,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T11:17:54.321Z] {"timestamp":1776251874257,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T11:17:54.321Z] {"timestamp":1776251874257,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T11:18:04.322Z] {"timestamp":1776251883555,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T11:18:04.322Z] {"timestamp":1776251883555,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T11:18:08.323Z] {"timestamp":1776251886850,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T11:18:08.323Z] {"timestamp":1776251886850,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T11:18:22.323Z] {"timestamp":1776251901275,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T11:18:22.323Z] {"timestamp":1776251901275,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T11:18:26.324Z] {"timestamp":1776251905117,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T11:18:26.324Z] {"timestamp":1776251905117,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T11:18:30.323Z] {"timestamp":1776251908611,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T11:18:30.323Z] {"timestamp":1776251908611,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T11:18:38.321Z] {"timestamp":1776251918150,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T11:18:38.321Z] {"timestamp":1776251918150,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T11:18:42.323Z] {"timestamp":1776251921660,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T11:18:42.323Z] {"timestamp":1776251921660,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T11:18:50.324Z] {"timestamp":1776251929118,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T11:18:50.324Z] {"timestamp":1776251929118,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T11:18:54.323Z] {"timestamp":1776251933048,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T11:18:54.323Z] {"timestamp":1776251933048,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T11:18:58.323Z] {"timestamp":1776251937347,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T11:18:58.323Z] {"timestamp":1776251937347,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T11:18:58.323Z] {"timestamp":1776251937347,"level":"DEBUG","args":["[vite]","hot updated: /src/components/Meters.tsx"],"stack":null}
+[2026-04-15T11:18:58.323Z] {"timestamp":1776251937347,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T11:19:55.932Z] {"timestamp":1776251993928,"level":"DEBUG","args":["[Manus] Debug collector initialized (no rrweb, UI events only)"],"stack":null}
+[2026-04-15T11:19:55.932Z] {"timestamp":1776251993941,"level":"DEBUG","args":["[vite] connected."],"stack":null}
+[2026-04-15T11:19:55.932Z] {"timestamp":1776251994147,"level":"INFO","args":["%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools","font-weight:bold"],"stack":null}
+[2026-04-15T11:20:07.748Z] {"timestamp":1776252005744,"level":"DEBUG","args":["[Manus] Debug collector initialized (no rrweb, UI events only)"],"stack":null}
+[2026-04-15T11:20:07.748Z] {"timestamp":1776252005795,"level":"DEBUG","args":["[vite] connected."],"stack":null}
+[2026-04-15T11:20:07.748Z] {"timestamp":1776252005893,"level":"INFO","args":["%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools","font-weight:bold"],"stack":null}
+[2026-04-15T11:20:34.547Z] {"timestamp":1776252032171,"level":"DEBUG","args":["[Manus] Debug collector initialized (no rrweb, UI events only)"],"stack":null}
+[2026-04-15T11:20:34.547Z] {"timestamp":1776252032226,"level":"DEBUG","args":["[vite] connected."],"stack":null}
+[2026-04-15T11:20:34.547Z] {"timestamp":1776252032446,"level":"INFO","args":["%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools","font-weight:bold"],"stack":null}
+[2026-04-15T11:39:27.828Z] {"timestamp":1776253165650,"level":"DEBUG","args":["[Manus] Debug collector initialized (no rrweb, UI events only)"],"stack":null}
+[2026-04-15T11:39:27.828Z] {"timestamp":1776253165654,"level":"DEBUG","args":["[vite] connected."],"stack":null}
+[2026-04-15T11:39:27.828Z] {"timestamp":1776253165828,"level":"INFO","args":["%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools","font-weight:bold"],"stack":null}
+[2026-04-15T11:41:00.827Z] {"timestamp":1776253258708,"level":"DEBUG","args":["[Manus] Debug collector initialized (no rrweb, UI events only)"],"stack":null}
+[2026-04-15T11:41:00.827Z] {"timestamp":1776253258732,"level":"DEBUG","args":["[vite] connected."],"stack":null}
+[2026-04-15T11:41:00.827Z] {"timestamp":1776253258882,"level":"INFO","args":["%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools","font-weight:bold"],"stack":null}
+[2026-04-15T12:15:29.121Z] {"timestamp":1776255328419,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T12:15:29.121Z] {"timestamp":1776255328419,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T12:15:29.121Z] {"timestamp":1776255328419,"level":"DEBUG","args":["[vite]","hot updated: /src/components/Meters.tsx"],"stack":null}
+[2026-04-15T12:15:29.121Z] {"timestamp":1776255328419,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T12:15:49.121Z] {"timestamp":1776255348001,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T12:15:49.121Z] {"timestamp":1776255348001,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T12:16:07.122Z] {"timestamp":1776255365216,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T12:16:07.122Z] {"timestamp":1776255365216,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T12:16:21.122Z] {"timestamp":1776255379445,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T12:16:21.122Z] {"timestamp":1776255379445,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T12:16:27.123Z] {"timestamp":1776255385428,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T12:16:27.123Z] {"timestamp":1776255385428,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T12:16:31.122Z] {"timestamp":1776255390768,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T12:16:31.122Z] {"timestamp":1776255390768,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T12:16:43.122Z] {"timestamp":1776255402760,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T12:16:43.122Z] {"timestamp":1776255402760,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T12:16:57.122Z] {"timestamp":1776255416161,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T12:16:57.122Z] {"timestamp":1776255416161,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T12:17:01.122Z] {"timestamp":1776255420423,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T12:17:01.122Z] {"timestamp":1776255420423,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T12:17:11.122Z] {"timestamp":1776255430224,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T12:17:11.122Z] {"timestamp":1776255430224,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T12:17:19.122Z] {"timestamp":1776255437845,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T12:17:19.122Z] {"timestamp":1776255437845,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T12:28:05.127Z] {"timestamp":1776256083394,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T12:28:05.127Z] {"timestamp":1776256083394,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T12:28:05.127Z] {"timestamp":1776256083394,"level":"DEBUG","args":["[vite]","hot updated: /src/components/Meters.tsx"],"stack":null}
+[2026-04-15T12:28:05.127Z] {"timestamp":1776256083394,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T12:28:11.126Z] {"timestamp":1776256090882,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T12:28:11.126Z] {"timestamp":1776256090882,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T12:28:11.126Z] {"timestamp":1776256090882,"level":"DEBUG","args":["[vite]","hot updated: /src/components/Meters.tsx"],"stack":null}
+[2026-04-15T12:28:11.126Z] {"timestamp":1776256090882,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T12:28:21.127Z] {"timestamp":1776256099791,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T12:28:21.127Z] {"timestamp":1776256099791,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T12:28:21.127Z] {"timestamp":1776256099791,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T12:28:21.127Z] {"timestamp":1776256099791,"level":"DEBUG","args":["[vite]","hot updated: /src/components/EquipmentLibraryPanel.tsx"],"stack":null}
+[2026-04-15T12:28:21.127Z] {"timestamp":1776256099791,"level":"DEBUG","args":["[vite]","hot updated: /src/components/Meters.tsx"],"stack":null}
+[2026-04-15T12:28:21.127Z] {"timestamp":1776256099791,"level":"DEBUG","args":["[vite]","hot updated: /src/components/SafetyWarnings.tsx"],"stack":null}
+[2026-04-15T12:28:39.127Z] {"timestamp":1776256118390,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T12:28:39.127Z] {"timestamp":1776256118390,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T12:28:45.127Z] {"timestamp":1776256124049,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T12:28:45.127Z] {"timestamp":1776256124049,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T12:28:49.126Z] {"timestamp":1776256128129,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T12:28:49.126Z] {"timestamp":1776256128129,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T12:28:53.127Z] {"timestamp":1776256132835,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T12:28:53.127Z] {"timestamp":1776256132835,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T12:29:03.128Z] {"timestamp":1776256141828,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T12:29:03.128Z] {"timestamp":1776256141828,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T12:29:09.127Z] {"timestamp":1776256149049,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T12:29:09.127Z] {"timestamp":1776256149049,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T12:29:15.128Z] {"timestamp":1776256155082,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T12:29:15.128Z] {"timestamp":1776256155082,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T12:29:23.127Z] {"timestamp":1776256161616,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T12:29:23.127Z] {"timestamp":1776256161617,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T12:29:31.127Z] {"timestamp":1776256169374,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T12:29:31.127Z] {"timestamp":1776256169374,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T12:29:37.127Z] {"timestamp":1776256175614,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T12:29:37.127Z] {"timestamp":1776256175614,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T12:29:55.127Z] {"timestamp":1776256193468,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T12:29:55.127Z] {"timestamp":1776256193468,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T12:35:01.140Z] {"timestamp":1776256500201,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T12:35:01.140Z] {"timestamp":1776256500201,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T12:35:01.140Z] {"timestamp":1776256500201,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T12:35:01.140Z] {"timestamp":1776256500201,"level":"DEBUG","args":["[vite]","hot updated: /src/components/EquipmentLibraryPanel.tsx"],"stack":null}
+[2026-04-15T12:35:01.140Z] {"timestamp":1776256500201,"level":"DEBUG","args":["[vite]","hot updated: /src/components/Meters.tsx"],"stack":null}
+[2026-04-15T12:35:01.140Z] {"timestamp":1776256500201,"level":"DEBUG","args":["[vite]","hot updated: /src/components/SafetyWarnings.tsx"],"stack":null}
+[2026-04-15T12:35:07.129Z] {"timestamp":1776256506152,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T12:35:07.129Z] {"timestamp":1776256506152,"level":"DEBUG","args":["[vite]","hot updated: /src/components/InspectorPanel.tsx"],"stack":null}
+[2026-04-15T12:35:11.129Z] {"timestamp":1776256509830,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T12:35:11.129Z] {"timestamp":1776256509830,"level":"DEBUG","args":["[vite]","hot updated: /src/components/EquipmentLibraryPanel.tsx"],"stack":null}
+[2026-04-15T12:35:29.130Z] {"timestamp":1776256527317,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T12:35:29.130Z] {"timestamp":1776256527317,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T12:35:29.130Z] {"timestamp":1776256527360,"level":"ERROR","args":[{"type":"UncaughtError","message":"Uncaught ReferenceError: Cannot access 'hydrateWorkspace' before initialization","filename":"http://localhost:3000/src/components/studio/Lab.tsx?t=1776256527180","lineno":365,"colno":7,"stack":"ReferenceError: Cannot access 'hydrateWorkspace' before initialization\n    at Lab (http://localhost:3000/src/components/studio/Lab.tsx?t=1776256527180:365:7)\n    at Object.react_stack_bottom_frame (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:18509:20)\n    at renderWithHooks (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:5654:24)\n    at updateFunctionComponent (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:7475:21)\n    at beginWork (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:8525:20)\n    at runWithFiberInDEV (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:997:72)\n    at performUnitOfWork (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:12561:98)\n    at workLoopSync (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:12424:43)\n    at renderRootSync (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:12408:13)\n    at performWorkOnRoot (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:11827:37)"}],"stack":"ReferenceError: Cannot access 'hydrateWorkspace' before initialization\n    at Lab (http://localhost:3000/src/components/studio/Lab.tsx?t=1776256527180:365:7)\n    at Object.react_stack_bottom_frame (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:18509:20)\n    at renderWithHooks (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:5654:24)\n    at updateFunctionComponent (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:7475:21)\n    at beginWork (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:8525:20)\n    at runWithFiberInDEV (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:997:72)\n    at performUnitOfWork (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:12561:98)\n    at workLoopSync (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:12424:43)\n    at renderRootSync (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:12408:13)\n    at performWorkOnRoot (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:11827:37)"}
+[2026-04-15T12:35:29.130Z] {"timestamp":1776256527360,"level":"WARN","args":["%s\n\n%s\n","An error occurred in the <Lab> component.","Consider adding an error boundary to your tree to customize error handling behavior.\nVisit https://react.dev/link/error-boundaries to learn more about error boundaries."],"stack":null}
+[2026-04-15T12:35:41.129Z] {"timestamp":1776256539563,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T12:35:41.129Z] {"timestamp":1776256539563,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T12:35:41.129Z] {"timestamp":1776256539583,"level":"ERROR","args":[{"type":"UncaughtError","message":"Uncaught ReferenceError: Cannot access 'hydrateWorkspace' before initialization","filename":"http://localhost:3000/src/components/studio/Lab.tsx?t=1776256527180","lineno":365,"colno":7,"stack":"ReferenceError: Cannot access 'hydrateWorkspace' before initialization\n    at Lab (http://localhost:3000/src/components/studio/Lab.tsx?t=1776256527180:365:7)\n    at Object.react_stack_bottom_frame (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:18509:20)\n    at renderWithHooks (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:5654:24)\n    at updateFunctionComponent (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:7475:21)\n    at beginWork (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:8525:20)\n    at runWithFiberInDEV (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:997:72)\n    at performUnitOfWork (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:12561:98)\n    at workLoopSync (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:12424:43)\n    at renderRootSync (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:12408:13)\n    at performWorkOnRoot (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:11827:37)"}],"stack":"ReferenceError: Cannot access 'hydrateWorkspace' before initialization\n    at Lab (http://localhost:3000/src/components/studio/Lab.tsx?t=1776256527180:365:7)\n    at Object.react_stack_bottom_frame (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:18509:20)\n    at renderWithHooks (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:5654:24)\n    at updateFunctionComponent (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:7475:21)\n    at beginWork (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:8525:20)\n    at runWithFiberInDEV (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:997:72)\n    at performUnitOfWork (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:12561:98)\n    at workLoopSync (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:12424:43)\n    at renderRootSync (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:12408:13)\n    at performWorkOnRoot (http://localhost:3000/@fs/Users/paulceppaglia/Developer/Signal_Flow/signal-flow-lab-pro/node_modules/.vite/deps/react-dom_client.js?v=65e5a884:11827:37)"}
+[2026-04-15T12:35:41.129Z] {"timestamp":1776256539583,"level":"WARN","args":["%s\n\n%s\n","An error occurred in the <Lab> component.","Consider adding an error boundary to your tree to customize error handling behavior.\nVisit https://react.dev/link/error-boundaries to learn more about error boundaries."],"stack":null}
+[2026-04-15T12:36:15.130Z] {"timestamp":1776256573955,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T12:36:15.130Z] {"timestamp":1776256573955,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T12:36:23.130Z] {"timestamp":1776256582456,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T12:36:23.130Z] {"timestamp":1776256582456,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T12:36:31.129Z] {"timestamp":1776256589753,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T12:36:31.129Z] {"timestamp":1776256589753,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T12:43:24.611Z] {"timestamp":1776257002592,"level":"DEBUG","args":["[Manus] Debug collector initialized (no rrweb, UI events only)"],"stack":null}
+[2026-04-15T12:43:24.611Z] {"timestamp":1776257002597,"level":"DEBUG","args":["[vite] connected."],"stack":null}
+[2026-04-15T12:43:24.611Z] {"timestamp":1776257003589,"level":"INFO","args":["%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools","font-weight:bold"],"stack":null}
+[2026-04-15T12:45:10.023Z] {"timestamp":1776257108006,"level":"DEBUG","args":["[Manus] Debug collector initialized (no rrweb, UI events only)"],"stack":null}
+[2026-04-15T12:45:10.023Z] {"timestamp":1776257108050,"level":"DEBUG","args":["[vite] connected."],"stack":null}
+[2026-04-15T12:45:10.023Z] {"timestamp":1776257108870,"level":"INFO","args":["%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools","font-weight:bold"],"stack":null}

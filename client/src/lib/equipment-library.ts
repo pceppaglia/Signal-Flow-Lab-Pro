@@ -8,7 +8,7 @@ export type SignalLevel = 'mic' | 'line' | 'speaker' | 'digital';
 
 export type EquipmentCategory = 
   | 'microphone' | 'preamp' | 'compressor' | 'eq' 
-  | 'reverb' | 'delay' | 'monitor' | 'interface' 
+  | 'reverb' | 'delay' | 'effects' | 'monitor' | 'interface' 
   | 'amp' | 'patchbay' | 'signal-gen' | 'console';
 
 export interface EquipmentDef {
@@ -18,6 +18,7 @@ export interface EquipmentDef {
   model: string;
   category: EquipmentCategory;
   description: string;
+  educationalTip?: string;
   width: number;
   heightUnits: number; // Vertical Rack Units (1U = 44px). 0 for floor gear.
   accentColor: string;
@@ -53,6 +54,53 @@ const genPorts = (count: number, prefix: string, type: SignalLevel = 'line') =>
   }));
 
 export const equipmentLibrary: EquipmentDef[] = [
+  {
+    id: 'sig-gen-pro',
+    name: 'Signal Generator Pro',
+    brand: 'SignalFlow',
+    model: 'SGP-1',
+    category: 'signal-gen',
+    description: 'Reference tone and noise generator for calibration and test routing.',
+    width: 600,
+    heightUnits: 1,
+    accentColor: '#00a8ff',
+    inputs: [],
+    outputs: [
+      { id: 'line-out-l', label: 'L', type: 'line', position: 0.35 },
+      { id: 'line-out-r', label: 'R', type: 'line', position: 0.65 },
+    ],
+    controls: [
+      {
+        id: 'frequency',
+        label: 'FREQ',
+        type: 'knob',
+        default: 1000,
+        min: 20,
+        max: 20000,
+        unit: 'Hz',
+      },
+      {
+        id: 'level',
+        label: 'LEVEL',
+        type: 'knob',
+        default: -18,
+        min: -60,
+        max: 0,
+        unit: 'dB',
+      },
+      {
+        id: 'waveform',
+        label: 'WAVE',
+        type: 'select',
+        default: 'sine',
+        options: [
+          { label: 'Sine', value: 'sine' },
+          { label: 'Square', value: 'square' },
+          { label: 'Noise', value: 'noise' },
+        ],
+      },
+    ],
+  },
   // --- PREAMPS (RACK GEAR) ---
   {
     id: 'neve-1073',
@@ -73,7 +121,8 @@ export const equipmentLibrary: EquipmentDef[] = [
       { id: 'high-shelf', label: 'HIGH', type: 'knob', default: 0, min: -15, max: 15 },
       { id: 'mid-freq', label: 'MID', type: 'knob', default: 1.6, min: 0.36, max: 7.2 },
       { id: 'low-shelf', label: 'LOW', type: 'knob', default: 0, min: -15, max: 15, color: '#333' },
-      { id: 'phantom', label: '48V', type: 'switch', default: false }
+      { id: 'phantom', label: '48V', type: 'switch', default: false },
+      { id: 'phantomPower', label: '+48V', type: 'button', default: false }
     ]
   },
   {
@@ -145,6 +194,8 @@ export const equipmentLibrary: EquipmentDef[] = [
         ],
       },
     ]
+    ,
+    educationalTip: "The 1176 is a FET compressor known for lightning-fast attack. Push input for attitude and use aggressive ratios for drum smash."
   },
   {
     id: 'pk-2a',
@@ -162,7 +213,8 @@ export const equipmentLibrary: EquipmentDef[] = [
       { id: 'peak-reduction', label: 'REDUCTION', type: 'knob', default: 50, min: 0, max: 100 },
       { id: 'gain', label: 'GAIN', type: 'knob', default: 40, min: 0, max: 100 },
       { id: 'limit-comp', label: 'LIMIT', type: 'switch', default: false }
-    ]
+    ],
+    educationalTip: "LA-2A optical compression is program-dependent and smooth. Peak Reduction sets threshold while Gain restores level."
   },
   {
     id: 'ssl-bus-comp',
@@ -247,7 +299,7 @@ export const equipmentLibrary: EquipmentDef[] = [
     name: 'Digital Effects System',
     brand: 'Lexicon',
     model: '480L',
-    category: 'reverb',
+    category: 'effects',
     description: 'Benchmark digital reverb for elite studios.',
     width: 600,
     heightUnits: 4,
@@ -264,7 +316,7 @@ export const equipmentLibrary: EquipmentDef[] = [
     name: 'RE-201 Tape Delay',
     brand: 'Roland',
     model: 'RE-201',
-    category: 'delay',
+    category: 'effects',
     description: 'Classic tape echo with spring reverb.',
     width: 600,
     heightUnits: 3,
@@ -365,10 +417,93 @@ export const equipmentLibrary: EquipmentDef[] = [
   { id: 'shure-sm57', name: 'SM57 Dynamic', brand: 'Shure', model: 'SM57', category: 'microphone', microphoneType: 'dynamic', description: 'Snare/Amp workhorse.', width: 40, heightUnits: 0, accentColor: '#333333', inputs: [], outputs: [{ id: 'xlr', label: 'XLR', type: 'mic', position: 0.9 }], controls: [] },
   { id: 'shure-sm58', name: 'SM58 Dynamic', brand: 'Shure', model: 'SM58', category: 'microphone', microphoneType: 'dynamic', description: 'Vocal standard.', width: 50, heightUnits: 0, accentColor: '#444444', inputs: [], outputs: [{ id: 'xlr', label: 'XLR', type: 'mic', position: 0.9 }], controls: [] },
   { id: 'u87', name: 'U87 Condenser', brand: 'Neumann', model: 'U-87 Ai', category: 'microphone', microphoneType: 'condenser', description: 'Elite studio condenser.', width: 60, heightUnits: 0, accentColor: '#9ca3af', inputs: [], outputs: [{ id: 'xlr', label: 'XLR', type: 'mic', position: 0.9 }], controls: [] },
+  { id: 'u87-condenser', name: 'U87 Condenser Mic', brand: 'Neumann', model: 'U87', category: 'microphone', microphoneType: 'condenser', description: 'Studio-standard large diaphragm condenser microphone.', width: 60, heightUnits: 0, accentColor: '#9ca3af', inputs: [], outputs: [{ id: 'xlr', label: 'XLR', type: 'mic', position: 0.9 }], controls: [], educationalTip: "Requires phantom power from a preamp on mic-level links. Known for forward mids and polished vocal clarity." },
   { id: 'akg-c414', name: 'C414 Condenser', brand: 'AKG', model: 'C-414 XLII', category: 'microphone', microphoneType: 'condenser', description: 'Versatile instrument mic.', width: 50, heightUnits: 0, accentColor: '#222222', inputs: [], outputs: [{ id: 'xlr', label: 'XLR', type: 'mic', position: 0.9 }], controls: [] },
   { id: 'royer-r121', name: 'R-121 Ribbon', brand: 'Royer', model: 'R-121', category: 'microphone', microphoneType: 'ribbon', description: 'Smooth ribbon mic.', width: 30, heightUnits: 0, accentColor: '#111111', inputs: [], outputs: [{ id: 'xlr', label: 'XLR', type: 'mic', position: 0.9 }], controls: [] },
 
   // --- CONSOLES ---
+  {
+    id: '1176-peak-limiter',
+    name: '1176 Peak Limiter',
+    brand: 'Universal Audio',
+    model: '1176LN',
+    category: 'compressor',
+    description: 'Silver-face FET limiter with ultra-fast transient control.',
+    width: 600,
+    heightUnits: 2,
+    accentColor: '#c5c6ca',
+    inputs: [{ id: 'in', label: 'IN', type: 'line', position: 0.5 }],
+    outputs: [{ id: 'out', label: 'OUT', type: 'line', position: 0.5 }],
+    controls: [
+      { id: 'input', label: 'INPUT', type: 'knob', default: 30, min: 0, max: 100 },
+      { id: 'output', label: 'OUTPUT', type: 'knob', default: 24, min: 0, max: 100 },
+      { id: 'attack', label: 'ATTACK', type: 'knob', default: 3, min: 1, max: 7 },
+      { id: 'release', label: 'RELEASE', type: 'knob', default: 4, min: 1, max: 7 },
+    ],
+    educationalTip: "FET compression reacts quickly and adds edge when driven. Keep output conservative to avoid overloading downstream stages."
+  },
+  {
+    id: 'la-2a-leveling',
+    name: 'LA-2A Leveling Amplifier',
+    brand: 'Teletronix',
+    model: 'LA-2A',
+    category: 'compressor',
+    description: 'Gray-face optical leveling amp with musical gain reduction.',
+    width: 600,
+    heightUnits: 3,
+    accentColor: '#bdbdc2',
+    inputs: [{ id: 'in', label: 'IN', type: 'line', position: 0.5 }],
+    outputs: [{ id: 'out', label: 'OUT', type: 'line', position: 0.5 }],
+    controls: [
+      { id: 'peak-reduction', label: 'REDUCTION', type: 'knob', default: 50, min: 0, max: 100 },
+      { id: 'gain', label: 'GAIN', type: 'knob', default: 40, min: 0, max: 100 },
+    ],
+    educationalTip: "Optical cells respond smoothly to vocals and bass. Pair with a fast FET limiter after it for modern vocal chains."
+  },
+  {
+    id: 'professional-mixer-console',
+    name: 'Professional Mixer Console',
+    brand: 'SignalFlow',
+    model: 'PMC-32',
+    category: 'console',
+    description: 'Large-format inline mixer with meter bridge and integrated monitoring section.',
+    width: 1200,
+    heightUnits: 14,
+    accentColor: '#2d2d2d',
+    inputs: [
+      { id: 'ch-in-1', label: 'CH1', type: 'line', position: 0.12 },
+      { id: 'ch-in-2', label: 'CH2', type: 'line', position: 0.24 },
+      { id: 'ch-in-3', label: 'CH3', type: 'line', position: 0.36 },
+      { id: 'ch-in-4', label: 'CH4', type: 'line', position: 0.48 },
+      { id: 'ch-in-5', label: 'CH5', type: 'line', position: 0.6 },
+    ],
+    outputs: [
+      { id: 'main-out-l', label: 'L', type: 'line', position: 0.78 },
+      { id: 'main-out-r', label: 'R', type: 'line', position: 0.88 },
+    ],
+    controls: [
+      { id: 'ch-1-fader', label: 'CH1', type: 'fader', default: 72, min: 0, max: 100 },
+      { id: 'ch-1-mute', label: 'M1', type: 'button', default: false },
+      { id: 'ch-1-solo', label: 'S1', type: 'button', default: false },
+      { id: 'ch-2-fader', label: 'CH2', type: 'fader', default: 70, min: 0, max: 100 },
+      { id: 'ch-2-mute', label: 'M2', type: 'button', default: false },
+      { id: 'ch-2-solo', label: 'S2', type: 'button', default: false },
+      { id: 'ch-3-fader', label: 'CH3', type: 'fader', default: 68, min: 0, max: 100 },
+      { id: 'ch-3-mute', label: 'M3', type: 'button', default: false },
+      { id: 'ch-3-solo', label: 'S3', type: 'button', default: false },
+      { id: 'ch-4-fader', label: 'CH4', type: 'fader', default: 74, min: 0, max: 100 },
+      { id: 'ch-4-mute', label: 'M4', type: 'button', default: false },
+      { id: 'ch-4-solo', label: 'S4', type: 'button', default: false },
+      { id: 'ch-5-fader', label: 'CH5', type: 'fader', default: 66, min: 0, max: 100 },
+      { id: 'ch-5-mute', label: 'M5', type: 'button', default: false },
+      { id: 'ch-5-solo', label: 'S5', type: 'button', default: false },
+      { id: 'master-fader', label: 'MASTER', type: 'fader', default: 70, min: 0, max: 100 },
+      { id: 'talkback', label: 'TALK', type: 'button', default: false },
+      { id: 'monitor-level', label: 'MON', type: 'knob', default: -20, min: -100, max: 10 },
+      { id: 'aux-1-send', label: 'AUX1', type: 'knob', default: 0, min: -24, max: 10 },
+      { id: 'aux-2-send', label: 'AUX2', type: 'knob', default: 0, min: -24, max: 10 },
+    ],
+  },
   {
     id: 'vortex-1604',
     name: 'Vortex-16 Workhorse',
@@ -414,6 +549,12 @@ export const equipmentLibrary: EquipmentDef[] = [
     controls: []
   }
 ];
+
+equipmentLibrary.forEach((eq) => {
+  if (!eq.educationalTip) {
+    eq.educationalTip = `${eq.brand} ${eq.model}: focus on gain staging and signal matching across ports for best headroom.`;
+  }
+});
 
 export const getEquipmentById = (id: string) => equipmentLibrary.find(e => e.id === id);
 

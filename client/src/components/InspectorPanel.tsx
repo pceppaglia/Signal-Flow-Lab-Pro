@@ -160,6 +160,15 @@ export default function InspectorPanel({ node, def, onUpdateSetting, onRemove, a
         <div className="text-[10px] text-[#555] mt-0.5">{def.model}</div>
       </div>
 
+      {def.educationalTip && (
+        <div className="px-3 py-3 border-b border-[#222] bg-[#10151e]">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-[#9fd0ff]">
+            Engineer's Note
+          </div>
+          <p className="mt-1 text-[11px] leading-relaxed text-[#dbe8ff]">{def.educationalTip}</p>
+        </div>
+      )}
+
       {/* Pro knowledge first — theory */}
       <div className="px-3 py-3 border-b border-[#222] bg-[#0d0d0d]">
         <div className="flex items-center gap-2 mb-2">
@@ -322,18 +331,6 @@ export default function InspectorPanel({ node, def, onUpdateSetting, onRemove, a
         </div>
       </div>
 
-      {/* Educational Info */}
-      {def.educationalInfo && (
-        <div className="p-3 border-t border-[#222] bg-[#0D0D0D]">
-          <div className="flex items-center gap-1 mb-1">
-            <Info className="w-3 h-3 text-[#E8A020]" />
-            <span className="text-[10px] text-[#E8A020] font-bold tracking-wider">LEARN</span>
-          </div>
-          <p className="text-[10px] text-[#A89F94] leading-relaxed max-h-24 overflow-y-auto">
-            {def.educationalInfo}
-          </p>
-        </div>
-      )}
     </div>
   );
 }

@@ -91,6 +91,7 @@ export default function EquipmentLibraryPanel({ onAddEquipment }: Props) {
             key={eq.id}
             className="flex items-center gap-2 p-2 rounded-lg bg-[#141414] border border-[#1a1a1a] hover:border-[#E8A020]/30 transition-colors group cursor-pointer"
             onClick={() => onAddEquipment(eq.id)}
+            title={eq.educationalTip || eq.description}
           >
             {/* Color indicator */}
             <div className="w-1 h-8 rounded-full" style={{ backgroundColor: eq.accentColor || '#E8A020' }} />
