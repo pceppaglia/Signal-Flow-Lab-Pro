@@ -29,11 +29,15 @@ export interface EquipmentDef {
   controls: Array<{ 
     id: string; 
     label: string; 
-    type: 'knob' | 'switch' | 'fader' | 'button'; 
+    type: 'knob' | 'switch' | 'fader' | 'button' | 'select'; 
     default: any; 
     min?: number; 
     max?: number;
     color?: string;
+    options?: Array<{ label: string; value: string }>;
+    tooltip?: string;
+    step?: number;
+    unit?: string;
   }>;
 }
 
@@ -126,7 +130,18 @@ export const equipmentLibrary: EquipmentDef[] = [
       { id: 'output', label: 'OUTPUT', type: 'knob', default: 24, min: 0, max: 100 },
       { id: 'attack', label: 'ATTACK', type: 'knob', default: 3, min: 1, max: 7 },
       { id: 'release', label: 'RELEASE', type: 'knob', default: 4, min: 1, max: 7 },
-      { id: 'ratio', label: 'RATIO', type: 'switch', default: 4 }
+      {
+        id: 'ratio',
+        label: 'RATIO',
+        type: 'select',
+        default: '4',
+        options: [
+          { label: '4:1', value: '4' },
+          { label: '8:1', value: '8' },
+          { label: '12:1', value: '12' },
+          { label: '20:1', value: '20' },
+        ],
+      },
     ]
   },
   {
@@ -197,9 +212,13 @@ export const equipmentLibrary: EquipmentDef[] = [
     inputs: [{ id: 'in', label: 'IN', type: 'line', position: 0.5 }],
     outputs: [{ id: 'out', label: 'OUT', type: 'line', position: 0.5 }],
     controls: [
-      { id: 'boost-low', label: 'BOOST', type: 'knob', default: 0, min: 0, max: 10 },
-      { id: 'atten-low', label: 'ATTEN', type: 'knob', default: 0, min: 0, max: 10 },
-      { id: 'low-freq', label: 'CPS', type: 'knob', default: 60 }
+      { id: 'boost-low', label: 'BOOST LF', type: 'knob', default: 0, min: 0, max: 10 },
+      { id: 'atten-low', label: 'ATTEN LF', type: 'knob', default: 0, min: 0, max: 10 },
+      { id: 'low-freq', label: 'CPS', type: 'knob', default: 60, min: 20, max: 100 },
+      { id: 'boost-high', label: 'BOOST HF', type: 'knob', default: 0, min: 0, max: 10 },
+      { id: 'atten-high', label: 'ATTEN HF', type: 'knob', default: 0, min: 0, max: 10 },
+      { id: 'high-freq', label: 'KCS', type: 'knob', default: 5, min: 3, max: 16 },
+      { id: 'bandwidth', label: 'BW', type: 'knob', default: 5, min: 1, max: 10 },
     ]
   },
   {

@@ -16,9 +16,16 @@ const ProfessionalMixerConsole: React.FC<ConsoleProps> = ({ node, onControlChang
   const isSovereign = def.id === 'sovereign-vr';
   const isVector = def.id === 'vector-4k';
   const isPearl = def.id === 'pearl-asp';
-  
+  const isSsl = def.id === 'ssl-4000g';
+
   const channelCount = def.inputs.length;
-  const accentColor = isSovereign ? '#d91e1e' : isVector ? '#22a' : '#555';
+  const accentColor = isSsl
+    ? '#c8c8c8'
+    : isSovereign
+      ? '#d91e1e'
+      : isVector
+        ? '#22a'
+        : '#555';
 
   return (
     <div className="flex flex-col h-full bg-[#1a1a1a] text-gray-300 font-sans shadow-2xl rounded-t-lg overflow-hidden border-t border-white/10">

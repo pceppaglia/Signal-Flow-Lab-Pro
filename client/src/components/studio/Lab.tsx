@@ -7,12 +7,22 @@ import ScenarioPanel from '../ScenarioPanel';
 import AssistantPanel from '../AssistantPanel';
 import MonitorMixPanel from '../MonitorMixPanel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { PeakMeter, VUMeter } from '@/components/Meters';
+import { snapRackNodePosition } from '@/lib/canvas-equipment-graphics';
 import type { StudioState, EquipmentNode } from '../../../../shared/equipment-types';
 import type { EquipmentDef } from '@/lib/equipment-library';
 import { equipmentLibrary } from '@/lib/equipment-library';
 import { audioEngine } from '@/lib/audio-engine-v2';
 import { scenarios } from '@/lib/scenarios';
+
+type DeskId = 'ssl-4000g' | 'pearl-asp' | 'vortex-1604';
 
 /** Inspector / safety panels expect `settings` + `signalLevels`; shared nodes use `state` only. */
 function adaptNodeForLegacyPanels(node: EquipmentNode): EquipmentNode & {
@@ -32,6 +42,7 @@ const Lab: React.FC = () => {
     connections: [],
     selectedNodeId: null,
   });
+  const [deskConsoleId, setDeskConsoleId] = useState<DeskId | null>(null);
   const [zoom, setZoom] = useState(1);
   const [engineRunning, setEngineRunning] = useState(false);
   const [meterDb, setMeterDb] = useState(-100);
@@ -39,6 +50,18 @@ const Lab: React.FC = () => {
   const activeScenario = scenarios[0]!;
   const [completedObjectives, setCompletedObjectives] = useState<Set<string>>(new Set());
   const [scenarioHintId, setScenarioHintId] = useState<string | null>(null);
+
+  const deskNode = useMemo((): EquipmentNode | null => {
+    if (!deskConsoleId) return null;
+    return {
+      id: '__desk_overlay__',
+      defId: deskConsoleId,
+      x: 0,
+      y: 0,
+      rotation: 0,
+      state: {},
+    };
+  }, [deskConsoleId]);
 
   useEffect(() => {
     const unsub = audioEngine.subscribe((s) => {
@@ -61,11 +84,12 @@ const Lab: React.FC = () => {
   }, []);
 
   const addGear = async (defId: string) => {
-    await audioEngine.start();
-    setEngineRunning(audioEngine.isRunning);
-
     const def = equipmentLibrary.find((d) => d.id === defId);
     if (!def) return;
+    if (def.category === 'console') return;
+
+    await audioEngine.start();
+    setEngineRunning(audioEngine.isRunning);
 
     const nodeId = `node-${Date.now()}`;
     const newNode: EquipmentNode = {
@@ -89,20 +113,69 @@ const Lab: React.FC = () => {
   };
 
   const handleUpdateNode = useCallback((id: string, x: number, y: number) => {
-    setState((prev) => ({
-      ...prev,
-      nodes: prev.nodes.map((n) => {
-        if (n.id !== id) return n;
-        const def = equipmentLibrary.find((d) => d.id === n.defId);
+    setState((ws) => {
+      const node = ws.nodes.find((n) => n.id === id);
+      if (!node) return ws;
+      const def = equipmentLibrary.find((d) => d.id === node.defId);
+      const snappedPos =
+        def && def.heightUnits > 0
+          ? snapRackNodePosition(x, y, def.width, def.heightUnits)
+          : { x, y };
+      return {
+        ...ws,
+        nodes: ws.nodes.map((n) =>
+          n.id === id ? { ...n, ...snappedPos } : n
+        ),
+      };
+    });
+  }, []);
 
-        let finalY = y;
-        if (x < 1200 && def && def.heightUnits > 0) {
-          finalY = Math.round(y / 44) * 44;
+  const handleCanvasControl = useCallback(
+    (nodeId: string, controlId: string, value: number | boolean) => {
+      setState((prev) => {
+        const node = prev.nodes.find((nn) => nn.id === nodeId);
+        const def = node
+          ? equipmentLibrary.find((d) => d.id === node.defId)
+          : undefined;
+        if (def && typeof value === 'number') {
+          const ctrl = def.controls.find((c) => c.id === controlId);
+          if (
+            ctrl?.type === 'knob' &&
+            ctrl.min != null &&
+            ctrl.max != null
+          ) {
+            const norm =
+              (value - ctrl.min) / (ctrl.max - ctrl.min);
+            const safe = Math.max(0, Math.min(1, norm));
+            if (controlId === 'gain' || controlId === 'input') {
+              audioEngine.setNodeGain(nodeId, safe);
+            }
+            if (
+              controlId === 'mid-freq' ||
+              controlId === 'low-freq' ||
+              controlId === 'high-freq'
+            ) {
+              audioEngine.setFrequency(nodeId, 80 + safe * 8000);
+            }
+          }
         }
+        return {
+          ...prev,
+          nodes: prev.nodes.map((n) =>
+            n.id === nodeId
+              ? { ...n, state: { ...n.state, [controlId]: value } }
+              : n
+          ),
+        };
+      });
+    },
+    []
+  );
 
-        return { ...n, x, y: finalY };
-      }),
-    }));
+  const chooseSessionDesk = useCallback(async (defId: DeskId) => {
+    await audioEngine.start();
+    setEngineRunning(audioEngine.isRunning);
+    setDeskConsoleId(defId);
   }, []);
 
   const handlePlay = async () => {
@@ -169,7 +242,7 @@ const Lab: React.FC = () => {
           <EquipmentLibraryPanel onAddEquipment={addGear} />
         </aside>
 
-        {/* Center — Canvas + optional console */}
+        {/* Center — Canvas + desk overlay (console is never a workspace node) */}
         <div className="relative min-h-0 min-w-0 flex-1">
           <Renderer
             state={state}
@@ -178,17 +251,70 @@ const Lab: React.FC = () => {
               setState((prev) => ({ ...prev, selectedNodeId: id }))
             }
             onUpdateNode={handleUpdateNode}
+            onControlChange={handleCanvasControl}
           />
 
-          {selectedNode &&
-            equipmentLibrary.find((e) => e.id === selectedNode.defId)
-              ?.category === 'console' && (
-              <div className="absolute bottom-0 left-0 right-0 h-1/2 min-h-[200px]">
-                <ProfessionalMixerConsole node={selectedNode} />
+          <Dialog open={deskConsoleId === null}>
+            <DialogContent
+              className="border border-[#333] bg-[#141414] text-[#F5F0E8] sm:max-w-md"
+              onPointerDownOutside={(e) => e.preventDefault()}
+              onEscapeKeyDown={(e) => e.preventDefault()}
+            >
+              <DialogHeader>
+                <DialogTitle
+                  className="font-bold tracking-wider text-[#E8A020]"
+                  style={{ fontFamily: "'Bebas Neue', Impact, sans-serif" }}
+                >
+                  Session setup
+                </DialogTitle>
+                <DialogDescription className="text-[#A89F94] text-sm font-medium">
+                  Choose a console for this session. It appears as the desk at the bottom only — not on the patch canvas.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="mt-4 flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => chooseSessionDesk('ssl-4000g')}
+                  className="rounded border border-[#333] bg-[#1a1a1a] px-4 py-3 text-left text-sm font-medium transition-colors hover:border-[#E8A020]/50 hover:bg-[#222]"
+                >
+                  <span className="text-[#E8A020]">SSL</span> 4000 G+
+                  <span className="mt-0.5 block text-xs text-[#777]">
+                    Large-format rock/pop desk
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => chooseSessionDesk('pearl-asp')}
+                  className="rounded border border-[#333] bg-[#1a1a1a] px-4 py-3 text-left text-sm font-medium transition-colors hover:border-[#E8A020]/50 hover:bg-[#222]"
+                >
+                  <span className="text-[#E8A020]">Audient</span> Pearl ASP
+                  <span className="mt-0.5 block text-xs text-[#777]">
+                    Heritage recording console
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => chooseSessionDesk('vortex-1604')}
+                  className="rounded border border-[#333] bg-[#1a1a1a] px-4 py-3 text-left text-sm font-medium transition-colors hover:border-[#E8A020]/50 hover:bg-[#222]"
+                >
+                  <span className="text-[#E8A020]">Vortex</span> 1604
+                  <span className="mt-0.5 block text-xs text-[#777]">
+                    Compact 16-channel utility mixer
+                  </span>
+                </button>
               </div>
-            )}
+            </DialogContent>
+          </Dialog>
 
-          <div className="absolute right-4 top-4 flex gap-2">
+          {deskNode && (
+            <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-10 h-1/2 min-h-[200px]">
+              <div className="pointer-events-auto h-full">
+                <ProfessionalMixerConsole node={deskNode} />
+              </div>
+            </div>
+          )}
+
+          <div className="absolute right-4 top-4 z-20 flex gap-2">
             <button
               type="button"
               onClick={() => setZoom((z) => Math.max(0.5, z - 0.1))}
@@ -206,7 +332,7 @@ const Lab: React.FC = () => {
           </div>
         </div>
 
-        {/* Right — Tabbed tools (fixed width keeps inspector controls in-column) */}
+        {/* Right — Tabbed tools */}
         <div className="flex h-full w-96 min-w-[384px] flex-col overflow-hidden border-l border-white/10 bg-[#0d0d0d] font-medium">
           <Tabs defaultValue="inspector" className="flex h-full min-h-0 min-w-0 flex-col">
             <TabsList className="h-auto shrink-0 flex-wrap justify-start gap-0.5 bg-[#1a1a1a] p-1">
@@ -289,7 +415,6 @@ const Lab: React.FC = () => {
         </div>
       </div>
 
-      {/* Transport + master meters */}
       <footer className="flex shrink-0 items-center gap-6 border-t border-white/10 bg-[#141414] px-4 py-2">
         <div className="flex items-center gap-2">
           <button

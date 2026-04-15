@@ -1,19 +1,31 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import { StudioState, Connection } from '../../../../shared/equipment-types';
-import { renderEquipmentGraphics } from '../../lib/canvas-equipment-graphics';
+import {
+  renderEquipmentGraphics,
+  drawRackRails,
+  hitTestInteractiveControl,
+} from '../../lib/canvas-equipment-graphics';
 import { equipmentLibrary } from '../../lib/equipment-library';
 
 interface RendererProps {
   state: StudioState;
   onSelectNode: (id: string) => void;
   onUpdateNode: (id: string, x: number, y: number) => void;
+  onControlChange?: (
+    nodeId: string,
+    controlId: string,
+    value: number | boolean
+  ) => void;
   zoom: number;
 }
+
+const KNOB_DRAG_SENS = 0.35;
 
 const Renderer: React.FC<RendererProps> = ({
   state,
   onSelectNode,
   onUpdateNode,
+  onControlChange,
   zoom,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -23,29 +35,36 @@ const Renderer: React.FC<RendererProps> = ({
     grabX: number;
     grabY: number;
   } | null>(null);
+  const knobDragRef = useRef<{
+    nodeId: string;
+    controlId: string;
+    min: number;
+    max: number;
+    startClientY: number;
+    startValue: number;
+  } | null>(null);
+
   const stateRef = useRef(state);
   const zoomRef = useRef(zoom);
   const onUpdateNodeRef = useRef(onUpdateNode);
+  const onControlChangeRef = useRef(onControlChange);
 
   stateRef.current = state;
   zoomRef.current = zoom;
   onUpdateNodeRef.current = onUpdateNode;
+  onControlChangeRef.current = onControlChange;
 
-  const getWorldPoint = useCallback(
-    (clientX: number, clientY: number) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return { x: 0, y: 0 };
-      const rect = canvas.getBoundingClientRect();
-      const z = zoomRef.current;
-      return {
-        x: (clientX - rect.left) / z,
-        y: (clientY - rect.top) / z,
-      };
-    },
-    []
-  );
+  const getWorldPoint = useCallback((clientX: number, clientY: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    const z = zoomRef.current;
+    return {
+      x: (clientX - rect.left) / z,
+      y: (clientY - rect.top) / z,
+    };
+  }, []);
 
-  // HiDPI backing store + logical size (CSS pixels)
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -96,22 +115,24 @@ const Renderer: React.FC<RendererProps> = ({
 
       ctx.strokeStyle = 'rgba(255,255,255,0.05)';
       ctx.lineWidth = 1 / z;
-      for (let x = 0; x < vw; x += 100) {
+      for (let gx = 0; gx < vw; gx += 100) {
         ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, vh);
+        ctx.moveTo(gx, 0);
+        ctx.lineTo(gx, vh);
         ctx.stroke();
       }
-      for (let y = 0; y < vh; y += 44) {
+      for (let gy = 0; gy < vh; gy += 44) {
         ctx.strokeStyle =
-          y % (44 * 4) === 0
+          gy % (44 * 4) === 0
             ? 'rgba(255,255,255,0.1)'
             : 'rgba(255,255,255,0.03)';
         ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(vw, y);
+        ctx.moveTo(0, gy);
+        ctx.lineTo(vw, gy);
         ctx.stroke();
       }
+
+      drawRackRails(ctx, vh, z);
 
       st.connections.forEach((conn) => drawCable(ctx, conn, st));
 
@@ -141,6 +162,17 @@ const Renderer: React.FC<RendererProps> = ({
 
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
+      const kd = knobDragRef.current;
+      if (kd && onControlChangeRef.current) {
+        const dy = kd.startClientY - e.clientY;
+        const span = kd.max - kd.min;
+        const delta = dy * KNOB_DRAG_SENS * (span / 120);
+        let v = kd.startValue + delta;
+        v = Math.max(kd.min, Math.min(kd.max, v));
+        onControlChangeRef.current(kd.nodeId, kd.controlId, v);
+        return;
+      }
+
       const d = dragRef.current;
       if (!d) return;
       const { x, y } = getWorldPoint(e.clientX, e.clientY);
@@ -149,6 +181,7 @@ const Renderer: React.FC<RendererProps> = ({
 
     const onUp = () => {
       dragRef.current = null;
+      knobDragRef.current = null;
     };
 
     window.addEventListener('mousemove', onMove);
@@ -161,17 +194,44 @@ const Renderer: React.FC<RendererProps> = ({
 
   const handleMouseDown = (e: React.MouseEvent) => {
     const { x, y } = getWorldPoint(e.clientX, e.clientY);
+    knobDragRef.current = null;
 
-    // Later nodes paint on top — pick from the end for correct hit-testing when overlapping.
+    for (const node of [...state.nodes].reverse()) {
+      const def = equipmentLibrary.find((d) => d.id === node.defId);
+      if (!def) continue;
+      const hit = hitTestInteractiveControl(x, y, node, def);
+      if (hit) {
+        if (hit.kind === 'knob') {
+          knobDragRef.current = {
+            nodeId: hit.nodeId,
+            controlId: hit.controlId,
+            min: hit.min,
+            max: hit.max,
+            startClientY: e.clientY,
+            startValue: hit.value,
+          };
+          onSelectNode(hit.nodeId);
+        } else if (hit.kind === 'switch') {
+          onSelectNode(hit.nodeId);
+          onControlChangeRef.current?.(hit.nodeId, hit.controlId, !hit.value);
+        } else if (hit.kind === 'ratio') {
+          onSelectNode(hit.nodeId);
+          onControlChangeRef.current?.(hit.nodeId, 'ratio', hit.value);
+        }
+        dragRef.current = null;
+        return;
+      }
+    }
+
     const clickedNode = [...state.nodes].reverse().find((node) => {
       const def = equipmentLibrary.find((d) => d.id === node.defId);
       if (!def) return false;
-      const h = def.heightUnits > 0 ? def.heightUnits * 44 : 100;
+      const hh = def.heightUnits > 0 ? def.heightUnits * 44 : 100;
       return (
         x >= node.x &&
         x <= node.x + def.width &&
         y >= node.y &&
-        y <= node.y + h
+        y <= node.y + hh
       );
     });
 

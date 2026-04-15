@@ -1,16 +1,25 @@
 import React from 'react';
-import type { EquipmentNode, EquipmentDef, ControlDef } from '../../../shared/equipment-types';
+import type { EquipmentNode } from '../../../shared/equipment-types';
+import type { EquipmentDef } from '@/lib/equipment-library';
+import { getTheoryForEquipment } from '@/lib/equipment-theory';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Info, Trash2 } from 'lucide-react';
+import { Info, Trash2, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import SafetyWarnings from './SafetyWarnings';
 
+type ControlDef = EquipmentDef['controls'][number];
+
+type InspectorNode = EquipmentNode & {
+  settings: Record<string, unknown>;
+  signalLevels?: Record<string, number>;
+};
+
 interface Props {
-  node: EquipmentNode;
+  node: InspectorNode;
   def: EquipmentDef;
   onUpdateSetting: (key: string, value: number | boolean | string) => void;
   onRemove: () => void;
-  allNodes?: EquipmentNode[];
+  allNodes?: InspectorNode[];
   allCables?: any[];
 }
 
@@ -130,6 +139,7 @@ export default function InspectorPanel({ node, def, onUpdateSetting, onRemove, a
   const faders = def.controls.filter(c => c.type === 'fader');
   const switches = def.controls.filter(c => c.type === 'switch');
   const selects = def.controls.filter(c => c.type === 'select');
+  const theory = getTheoryForEquipment(def);
 
   return (
     <div className="h-full flex flex-col bg-[#111] border-l border-[#222]">
@@ -148,6 +158,18 @@ export default function InspectorPanel({ node, def, onUpdateSetting, onRemove, a
           {def.name}
         </div>
         <div className="text-[10px] text-[#555] mt-0.5">{def.model}</div>
+      </div>
+
+      {/* Pro knowledge first — theory */}
+      <div className="px-3 py-3 border-b border-[#222] bg-[#0d0d0d]">
+        <div className="flex items-center gap-2 mb-2">
+          <BookOpen className="w-3.5 h-3.5 text-[#E8A020]" />
+          <span className="text-[10px] font-semibold text-[#E8A020] tracking-wider uppercase">
+            Pro knowledge
+          </span>
+        </div>
+        <div className="text-xs font-medium text-[#F5F0E8] mb-1.5 leading-snug">{theory.title}</div>
+        <p className="text-[11px] text-[#A89F94] leading-relaxed font-medium">{theory.body}</p>
       </div>
 
       {/* Description */}
