@@ -103,6 +103,10 @@ const Lab: React.FC = () => {
 
     if (def.category === 'signal-gen') {
       audioEngine.createSourceNode(nodeId, 'sine');
+    } else if (def.category === 'microphone') {
+      audioEngine.createSourceNode(nodeId, 'noise');
+    } else {
+      audioEngine.ensurePatchNode(nodeId);
     }
 
     setState((prev) => ({
@@ -168,6 +172,68 @@ const Lab: React.FC = () => {
           ),
         };
       });
+    },
+    []
+  );
+
+  const handleConnect = useCallback(
+    (
+      fromNodeId: string,
+      fromPortId: string,
+      toNodeId: string,
+      toPortId: string
+    ) => {
+      if (fromNodeId === toNodeId) return;
+      void audioEngine.start();
+      setEngineRunning(audioEngine.isRunning);
+
+      let patch = false;
+      setState((prev) => {
+        const dup = prev.connections.some(
+          (c) =>
+            c.fromNodeId === fromNodeId &&
+            c.fromPortId === fromPortId &&
+            c.toNodeId === toNodeId &&
+            c.toPortId === toPortId
+        );
+        if (dup) return prev;
+
+        const fromNode = prev.nodes.find((n) => n.id === fromNodeId);
+        const fromDef = fromNode
+          ? equipmentLibrary.find((d) => d.id === fromNode.defId)
+          : undefined;
+        const fromPort = fromDef?.outputs.find((p) => p.id === fromPortId);
+        const cableColor =
+          fromPort?.type === 'mic'
+            ? 'mic'
+            : fromPort?.type === 'speaker'
+              ? 'speaker'
+              : fromPort?.type === 'digital'
+                ? 'digital'
+                : 'line';
+
+        patch = true;
+        return {
+          ...prev,
+          connections: [
+            ...prev.connections,
+            {
+              id: `conn-${Date.now()}`,
+              fromNodeId,
+              fromPortId,
+              toNodeId,
+              toPortId,
+              cableColor,
+            },
+          ],
+        };
+      });
+
+      if (patch) {
+        audioEngine.ensurePatchNode(fromNodeId);
+        audioEngine.ensurePatchNode(toNodeId);
+        audioEngine.connectNodes(fromNodeId, toNodeId);
+      }
     },
     []
   );
@@ -252,6 +318,7 @@ const Lab: React.FC = () => {
             }
             onUpdateNode={handleUpdateNode}
             onControlChange={handleCanvasControl}
+            onConnect={handleConnect}
           />
 
           <Dialog open={deskConsoleId === null}>

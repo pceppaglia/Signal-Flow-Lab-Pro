@@ -219,6 +219,32 @@ class AudioEngineV2 {
   }
 
   /**
+   * Passthrough patch point (e.g. preamp, EQ): input → gain → output → master until repatched.
+   */
+  ensurePatchNode(nodeId: string): AudioNodeInstance | null {
+    if (!this.ctx || !this.masterGain) return null;
+    const existing = this.nodeRegistry.get(nodeId);
+    if (existing) return existing;
+
+    const inputNode = this.ctx.createGain();
+    const outputNode = this.ctx.createGain();
+    const gainNode = this.ctx.createGain();
+    gainNode.gain.value = 1;
+    inputNode.connect(gainNode);
+    gainNode.connect(outputNode);
+    outputNode.connect(this.masterGain);
+
+    const instance: AudioNodeInstance = {
+      id: nodeId,
+      inputNode,
+      outputNode,
+      gainNode,
+    };
+    this.nodeRegistry.set(nodeId, instance);
+    return instance;
+  }
+
+  /**
    * Disconnects a node and releases memory.
    * RESTORED: Optional chaining used for clean, safe cleanup.
    */

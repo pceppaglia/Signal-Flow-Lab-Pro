@@ -3,7 +3,7 @@
  */
 
 import type { EquipmentNode } from '../../../shared/equipment-types';
-import type { EquipmentDef } from '@/lib/equipment-library';
+import type { EquipmentDef, SignalLevel } from '@/lib/equipment-library';
 import { equipmentLibrary } from '@/lib/equipment-library';
 
 export interface GraphicsContext {
@@ -201,6 +201,16 @@ function drawBrushedFace(
     ctx.fillRect(x + i, y, 1, h);
   }
   ctx.restore();
+
+  const u = 44;
+  for (let y0 = y; y0 < y + h; y0 += u) {
+    const segBottom = Math.min(y0 + u, y + h);
+    ctx.fillStyle = 'rgba(255,255,255,0.28)';
+    ctx.fillRect(x, y0, w, 1);
+    ctx.fillStyle = 'rgba(0,0,0,0.42)';
+    ctx.fillRect(x, segBottom - 1, w, 1);
+  }
+
   ctx.strokeStyle = 'rgba(255,255,255,0.15)';
   ctx.lineWidth = 1;
   ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
@@ -236,13 +246,29 @@ function drawKnobAt(
     g.addColorStop(0, '#2a2a2a');
     g.addColorStop(1, '#0a0a0a');
   }
+  ctx.shadowColor = 'rgba(0,0,0,0.42)';
+  ctx.shadowBlur = 6;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 3;
   ctx.fillStyle = g;
   ctx.beginPath();
   ctx.arc(0, 0, r, 0, Math.PI * 2);
   ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetY = 0;
+
   ctx.strokeStyle = 'rgba(0,0,0,0.5)';
   ctx.lineWidth = 1;
   ctx.stroke();
+
+  const hlR = Math.max(1.8, r * 0.22);
+  ctx.beginPath();
+  ctx.arc(-r * 0.32, -r * 0.36, r * 0.38, Math.PI * 1.05, Math.PI * 1.72);
+  ctx.strokeStyle = 'rgba(255,255,255,0.62)';
+  ctx.lineWidth = hlR;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
   ctx.strokeStyle = style === 'silver' ? '#333' : '#ddd';
   ctx.lineWidth = 1.5;
   ctx.beginPath();
@@ -474,7 +500,7 @@ function renderUrei1176(gc: GraphicsContext): void {
 // ─── Pultec EQP-1A — “Pultec trick” low band + CPS dial ───
 function renderPultec(gc: GraphicsContext): void {
   const { ctx, x, y, w, h, node } = gc;
-  const navy = '#2a303b';
+  const navy = '#1b263b';
   drawBrushedFace(ctx, x, y, w, h, navy);
 
   ctx.fillStyle = 'rgba(255,240,220,0.9)';
@@ -490,11 +516,12 @@ function renderPultec(gc: GraphicsContext): void {
   const al = controlDef(def, 'atten-low')!;
   const bLv = numState(node, 'boost-low', bl.default as number);
   const aLv = numState(node, 'atten-low', al.default as number);
+  const lowR = 28;
   drawKnobAt(
     ctx,
     x + 62,
     y + h * 0.48,
-    30,
+    lowR,
     knobAngle(bl.min ?? 0, bl.max ?? 10, bLv),
     'bakelite'
   );
@@ -502,7 +529,7 @@ function renderPultec(gc: GraphicsContext): void {
     ctx,
     x + 178,
     y + h * 0.48,
-    30,
+    lowR,
     knobAngle(al.min ?? 0, al.max ?? 10, aLv),
     'bakelite'
   );
@@ -722,12 +749,24 @@ function renderSsl4000gConsole(gc: GraphicsContext): void {
 
     const faderPos = 0.35;
     const capY = slotTop + faderPos * (slotH - 18);
-    ctx.fillStyle = '#f5f5f5';
-    ctx.strokeStyle = '#bbb';
+    const capW = 24;
+    const capH = 14;
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(fx - 12, capY, capW, capH, 2);
+    ctx.clip();
+    const capGrad = ctx.createLinearGradient(fx, capY, fx, capY + capH);
+    capGrad.addColorStop(0, '#fefefe');
+    capGrad.addColorStop(0.35, '#e6e6e6');
+    capGrad.addColorStop(0.55, '#d0d0d0');
+    capGrad.addColorStop(1, '#a8a8a8');
+    ctx.fillStyle = capGrad;
+    ctx.fillRect(fx - 12, capY, capW, capH);
+    ctx.restore();
+    ctx.strokeStyle = '#9a9a9a';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.roundRect(fx - 12, capY, 24, 14, 2);
-    ctx.fill();
+    ctx.roundRect(fx - 12, capY, capW, capH, 2);
     ctx.stroke();
     ctx.fillStyle = '#333';
     ctx.font = 'bold 7px sans-serif';
@@ -934,8 +973,8 @@ export function hitTestInteractiveControl(
       const d = def;
       const hh = def.heightUnits > 0 ? def.heightUnits * 44 : 88;
       const knobs: Array<{ id: string; cx: number; cy: number; r: number }> = [
-        { id: 'boost-low', cx: x + 62, cy: y + hh * 0.48, r: 34 },
-        { id: 'atten-low', cx: x + 178, cy: y + hh * 0.48, r: 34 },
+        { id: 'boost-low', cx: x + 62, cy: y + hh * 0.48, r: 36 },
+        { id: 'atten-low', cx: x + 178, cy: y + hh * 0.48, r: 36 },
         { id: 'low-freq', cx: x + 120, cy: y + hh * 0.82, r: 22 },
         { id: 'boost-high', cx: x + 320, cy: y + 36, r: 16 },
         { id: 'atten-high', cx: x + 400, cy: y + 36, r: 16 },
@@ -962,6 +1001,84 @@ export function hitTestInteractiveControl(
       break;
   }
   return null;
+}
+
+export interface PortPick {
+  nodeId: string;
+  portId: string;
+  side: 'input' | 'output';
+  type: SignalLevel;
+}
+
+const PORT_ROW_H = 14;
+const PORT_HIT_X = 16;
+
+/** Hit-test I/O jacks: inputs along top edge, outputs along bottom (world px). */
+export function hitTestAnyPort(
+  wx: number,
+  wy: number,
+  node: EquipmentNode,
+  def: EquipmentDef
+): PortPick | null {
+  const hh = def.heightUnits > 0 ? def.heightUnits * 44 : 100;
+  const nx = node.x;
+  const ny = node.y;
+
+  if (
+    def.inputs.length > 0 &&
+    wy >= ny &&
+    wy <= ny + PORT_ROW_H
+  ) {
+    for (const p of def.inputs) {
+      const px = nx + def.width * p.position;
+      if (Math.abs(wx - px) <= PORT_HIT_X) {
+        return {
+          nodeId: node.id,
+          portId: p.id,
+          side: 'input',
+          type: p.type,
+        };
+      }
+    }
+  }
+
+  if (
+    def.outputs.length > 0 &&
+    wy >= ny + hh - PORT_ROW_H &&
+    wy <= ny + hh
+  ) {
+    for (const p of def.outputs) {
+      const px = nx + def.width * p.position;
+      if (Math.abs(wx - px) <= PORT_HIT_X) {
+        return {
+          nodeId: node.id,
+          portId: p.id,
+          side: 'output',
+          type: p.type,
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
+/** Center of a jack in world coordinates (matches cable rendering). */
+export function getPortAnchor(
+  node: EquipmentNode,
+  def: EquipmentDef,
+  portId: string,
+  side: 'input' | 'output'
+): { x: number; y: number } | null {
+  const hh = def.heightUnits > 0 ? def.heightUnits * 44 : 100;
+  if (side === 'input') {
+    const p = def.inputs.find((i) => i.id === portId);
+    if (!p) return null;
+    return { x: node.x + def.width * p.position, y: node.y + 5 };
+  }
+  const p = def.outputs.find((o) => o.id === portId);
+  if (!p) return null;
+  return { x: node.x + def.width * p.position, y: node.y + hh - 5 };
 }
 
 export function renderEquipmentGraphics(gc: GraphicsContext): void {
