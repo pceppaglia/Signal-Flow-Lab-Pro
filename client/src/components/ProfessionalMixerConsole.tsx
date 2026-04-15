@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { EquipmentNode } from '../../../../shared/equipment-types';
-import { equipmentLibrary } from '../../lib/equipment-library';
+import { equipmentLibrary } from '../lib/equipment-library';
 
 interface ConsoleProps {
   node: EquipmentNode;

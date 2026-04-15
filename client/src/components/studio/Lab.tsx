@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import Renderer from './Renderer';
-import ProfessionalMixerConsole from './ProfessionalMixerConsole';
+import ProfessionalMixerConsole from '../ProfessionalMixerConsole';
 import { StudioState, EquipmentNode } from '../../../../shared/equipment-types';
 import { equipmentLibrary } from '../../lib/equipment-library';
 import { audioEngine } from '../../lib/audio-engine-v2';

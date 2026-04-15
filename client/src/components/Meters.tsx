@@ -1,5 +1,10 @@
 import React, { useRef, useEffect, useCallback } from 'react';
-import { audioEngine } from '@/lib/audio-engine';
+/**
+ * Waveform and spectrum data come from the shared `audioEngine` singleton (`audio-engine-v2`).
+ * `getTimeDomainData` / `getFrequencyData` read the engine’s `masterAnalyser` (same node as `analyserNode`),
+ * which sits after `masterGain` in the chain: master → clipper → **masterAnalyser** → output → destination.
+ */
+import { audioEngine } from '@/lib/audio-engine-v2';
 
 /** VU Meter with needle animation */
 export function VUMeter({ level, label }: { level: number; label?: string }) {
