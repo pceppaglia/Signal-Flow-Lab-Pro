@@ -293,6 +293,29 @@ class AudioEngineV2 {
     }
   }
 
+  /**
+   * Ramps master bus to silence then suspends the AudioContext to reduce clicks/pops.
+   */
+  async suspendOutputWithRampDown(): Promise<void> {
+    const ctx = this.ctx;
+    if (!ctx) return;
+
+    if (this.masterGain) {
+      const t = ctx.currentTime;
+      const g = this.masterGain.gain;
+      g.cancelScheduledValues(t);
+      g.setValueAtTime(g.value, t);
+      g.setTargetAtTime(0, t, 0.05);
+    }
+
+    await new Promise<void>((r) => setTimeout(r, 90));
+
+    if (ctx.state === 'running') {
+      await ctx.suspend();
+    }
+    this.notifyListeners();
+  }
+
   setOutputGate(value: number): void {
     if (this.outputGate && this.ctx) {
       const safeValue = Math.max(0, Math.min(1, value));

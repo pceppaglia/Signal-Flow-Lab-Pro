@@ -36,3 +36,34 @@
 [2026-04-15T00:56:41.327Z] {"timestamp":1776214599410,"level":"DEBUG","args":["[vite] connected."],"stack":null}
 [2026-04-15T00:56:41.327Z] {"timestamp":1776214599416,"level":"INFO","args":["%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools","font-weight:bold"],"stack":null}
 [2026-04-15T01:00:41.355Z] {"timestamp":1776214839736,"level":"LOG","args":["[vite] server connection lost. Polling for restart..."],"stack":null}
+[2026-04-15T01:09:08.792Z] {"timestamp":1776215346713,"level":"DEBUG","args":["[Manus] Debug collector initialized (no rrweb, UI events only)"],"stack":null}
+[2026-04-15T01:09:08.792Z] {"timestamp":1776215348238,"level":"DEBUG","args":["[vite] connected."],"stack":null}
+[2026-04-15T01:09:13.386Z] {"timestamp":1776215351382,"level":"DEBUG","args":["[Manus] Debug collector initialized (no rrweb, UI events only)"],"stack":null}
+[2026-04-15T01:09:13.386Z] {"timestamp":1776215351985,"level":"INFO","args":["%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools","font-weight:bold"],"stack":null}
+[2026-04-15T01:09:13.386Z] {"timestamp":1776215352220,"level":"DEBUG","args":["[vite] connected."],"stack":null}
+[2026-04-15T01:25:45.364Z] {"timestamp":1776216343774,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T01:25:45.364Z] {"timestamp":1776216343774,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T01:25:45.364Z] {"timestamp":1776216343774,"level":"DEBUG","args":["[vite]","hot updated: /src/components/Meters.tsx"],"stack":null}
+[2026-04-15T01:25:51.358Z] {"timestamp":1776216350901,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T01:25:51.358Z] {"timestamp":1776216350901,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T01:26:03.364Z] {"timestamp":1776216361890,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T01:26:03.364Z] {"timestamp":1776216361890,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T01:26:03.364Z] {"timestamp":1776216361890,"level":"DEBUG","args":["[vite]","hot updated: /src/components/Meters.tsx"],"stack":null}
+[2026-04-15T01:26:07.360Z] {"timestamp":1776216366766,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T01:26:07.360Z] {"timestamp":1776216366766,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Renderer.tsx"],"stack":null}
+[2026-04-15T01:26:07.360Z] {"timestamp":1776216367054,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T01:26:07.360Z] {"timestamp":1776216367054,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T01:26:09.358Z] {"timestamp":1776216367507,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T01:26:09.358Z] {"timestamp":1776216367507,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T01:26:09.358Z] {"timestamp":1776216367858,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T01:26:09.358Z] {"timestamp":1776216367858,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T01:26:09.358Z] {"timestamp":1776216369144,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T01:26:09.358Z] {"timestamp":1776216369144,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T01:26:13.358Z] {"timestamp":1776216371420,"level":"ERROR","args":["[vite]","Failed to reload /src/components/studio/Lab.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above)"],"stack":"Error\n    at console.<computed> [as error] (http://localhost:3000/__manus__/debug-collector.js:391:37)\n    at Object.error (http://localhost:3000/@vite/client:809:26)\n    at HMRClient.warnFailedUpdate (http://localhost:3000/@vite/client:181:15)\n    at HMRClient.fetchUpdate (http://localhost:3000/@vite/client:212:10)\n    at async Promise.all (index 0)\n    at async HMRClient.queueUpdate (http://localhost:3000/@vite/client:196:5)\n    at async Promise.all (index 0)\n    at async handleMessage (http://localhost:3000/@vite/client:838:4)"}
+[2026-04-15T01:26:13.358Z] {"timestamp":1776216371432,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T01:26:13.358Z] {"timestamp":1776216371432,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T01:26:13.358Z] {"timestamp":1776216371818,"level":"DEBUG","args":["[vite]","hot updated: /src/components/studio/Lab.tsx"],"stack":null}
+[2026-04-15T01:26:13.358Z] {"timestamp":1776216371818,"level":"DEBUG","args":["[vite]","hot updated: /src/index.css"],"stack":null}
+[2026-04-15T01:52:24.214Z] {"timestamp":1776217942212,"level":"DEBUG","args":["[Manus] Debug collector initialized (no rrweb, UI events only)"],"stack":null}
+[2026-04-15T01:52:24.214Z] {"timestamp":1776217942274,"level":"DEBUG","args":["[vite] connected."],"stack":null}
+[2026-04-15T01:52:24.214Z] {"timestamp":1776217942451,"level":"INFO","args":["%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools","font-weight:bold"],"stack":null}

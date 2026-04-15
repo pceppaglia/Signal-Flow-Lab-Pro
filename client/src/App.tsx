@@ -2,8 +2,7 @@ import React from 'react';
 import { Switch, Route } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/NotFound";
-
-// --- IMPORT OUR NEW STUDIO ENGINE ---
+import Home from './pages/Home';
 import Lab from './components/studio/Lab';
 
 /**
@@ -13,13 +12,8 @@ import Lab from './components/studio/Lab';
 function Router() {
   return (
     <Switch>
-      {/* 
-          The Lab is our main route. 
-          Everything (Rack, Floor, Mixer) happens inside this component.
-      */}
-      <Route path="/" component={Lab} />
-      
-      {/* 404 Fallback */}
+      <Route path="/" component={Home} />
+      <Route path="/lab" component={Lab} />
       <Route component={NotFound} />
     </Switch>
   );
