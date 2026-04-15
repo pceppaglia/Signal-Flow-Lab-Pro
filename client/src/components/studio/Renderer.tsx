@@ -28,6 +28,12 @@ interface RendererProps {
     toNodeId: string,
     toPortId: string
   ) => void;
+  onAddCable?: (
+    fromNodeId: string,
+    fromPortId: string,
+    toNodeId: string,
+    toPortId: string
+  ) => void;
   selectedCableId?: string | null;
   onSelectCable?: (cableId: string | null) => void;
   onCanvasReady?: (canvas: HTMLCanvasElement | null) => void;
@@ -591,6 +597,7 @@ const Renderer: React.FC<RendererProps> = ({
   onUpdateNode,
   onControlChange,
   onConnect,
+  onAddCable,
   selectedCableId,
   onSelectCable,
   onCanvasReady,
@@ -639,6 +646,7 @@ const Renderer: React.FC<RendererProps> = ({
   const onUpdateNodeRef = useRef(onUpdateNode);
   const onControlChangeRef = useRef(onControlChange);
   const onConnectRef = useRef(onConnect);
+  const onAddCableRef = useRef(onAddCable);
   const selectedCableIdRef = useRef<string | null | undefined>(selectedCableId);
   const onSelectCableRef = useRef(onSelectCable);
   const onCanvasReadyRef = useRef(onCanvasReady);
@@ -653,6 +661,7 @@ const Renderer: React.FC<RendererProps> = ({
   onUpdateNodeRef.current = onUpdateNode;
   onControlChangeRef.current = onControlChange;
   onConnectRef.current = onConnect;
+  onAddCableRef.current = onAddCable;
   selectedCableIdRef.current = selectedCableId;
   onSelectCableRef.current = onSelectCable;
   onCanvasReadyRef.current = onCanvasReady;
@@ -1111,7 +1120,7 @@ const Renderer: React.FC<RendererProps> = ({
 
     const onUp = (e: MouseEvent) => {
       const cd = cableDragRef.current;
-      if (cd && onConnectRef.current) {
+      if (cd && (onConnectRef.current || onAddCableRef.current)) {
         const { x, y } = getWorldPoint(e.clientX, e.clientY);
         const { h: lh } = logicalSizeRef.current;
         const vh = lh / zoomRef.current;
@@ -1151,7 +1160,8 @@ const Renderer: React.FC<RendererProps> = ({
             target.nodeId,
             target.portId
           );
-          onConnectRef.current(
+          const addCable = onAddCableRef.current ?? onConnectRef.current;
+          addCable?.(
             cd.fromNodeId,
             cd.fromPortId,
             target.nodeId,

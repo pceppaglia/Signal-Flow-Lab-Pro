@@ -127,7 +127,7 @@ const Lab: React.FC = () => {
     );
   }, [state.connections]);
 
-  const addGear = async (defId: string) => {
+  const handleAddGear = useCallback(async (defId: string) => {
     const def = equipmentLibrary.find((d) => d.id === defId);
     if (!def) return;
 
@@ -161,13 +161,7 @@ const Lab: React.FC = () => {
       state: defaultState,
     };
 
-    if (def.category === 'signal-gen') {
-      audioEngine.createSourceNode(nodeId, 'sine');
-    } else if (def.category === 'microphone') {
-      audioEngine.createSourceNode(nodeId, 'noise');
-    } else {
-      audioEngine.ensurePatchNode(nodeId, defId);
-    }
+    audioEngine.createNode(nodeId, defId);
     audioEngine.registerNodeProfile(nodeId, defId, newNode.state);
 
     setState((prev) => ({
@@ -175,7 +169,7 @@ const Lab: React.FC = () => {
       nodes: [...prev.nodes, newNode],
       selectedNodeId: newNode.id,
     }));
-  };
+  }, [state.nodes]);
 
   const handleUpdateNode = useCallback((id: string, x: number, y: number) => {
     setState((ws) => {
@@ -346,6 +340,16 @@ const Lab: React.FC = () => {
     },
     []
   );
+
+  const ws = useMemo(() => ({
+    addNode: (defId: string, _x?: number, _y?: number) => handleAddGear(defId),
+    addCable: (
+      fromNodeId: string,
+      fromPortId: string,
+      toNodeId: string,
+      toPortId: string
+    ) => handleConnect(fromNodeId, fromPortId, toNodeId, toPortId),
+  }), [handleAddGear, handleConnect]);
 
   const handlePlay = async () => {
     await audioEngine.start();
@@ -570,7 +574,7 @@ const Lab: React.FC = () => {
               </div>
             </div>
           )}
-          {showLeftSidebar && <EquipmentLibraryPanel onAddEquipment={addGear} />}
+          {showLeftSidebar && <EquipmentLibraryPanel onAddEquipment={(defId) => ws.addNode(defId)} />}
         </div>
 
         <div className="relative min-h-0 min-w-0 flex-1">
@@ -583,6 +587,7 @@ const Lab: React.FC = () => {
             onUpdateNode={handleUpdateNode}
             onControlChange={handleCanvasControl}
             onConnect={handleConnect}
+            onAddCable={ws.addCable}
             sfvMode={sfvMode}
             blueprintMode={blueprintMode}
             onCanvasReady={(el) => {

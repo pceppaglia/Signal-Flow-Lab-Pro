@@ -1117,6 +1117,9 @@ export function renderEquipmentGraphics(gc: GraphicsContext): void {
     case 'vortex-1604':
       renderConsoleStrip(gc, '#222', '#E8A020', 'Vortex VX-1604', 16);
       break;
+    case 'professional-mixer-console':
+      renderConsoleStrip(gc, '#1f1f1f', '#9cd3ff', 'Professional Mixer Console', 12);
+      break;
     default:
       renderDefault(gc);
   }

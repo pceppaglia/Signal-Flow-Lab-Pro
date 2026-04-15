@@ -211,14 +211,44 @@ class AudioEngineV2 {
         }
       }
       this.connectMasterOutputToDestination();
+      window.removeEventListener('click', resumeOnGesture);
       window.removeEventListener('pointerdown', resumeOnGesture);
       window.removeEventListener('keydown', resumeOnGesture);
       window.removeEventListener('touchstart', resumeOnGesture);
     };
 
+    window.addEventListener('click', resumeOnGesture, { passive: true });
     window.addEventListener('pointerdown', resumeOnGesture, { passive: true });
     window.addEventListener('keydown', resumeOnGesture, { passive: true });
     window.addEventListener('touchstart', resumeOnGesture, { passive: true });
+  }
+
+  createNode(nodeId: string, defId: string): AudioNodeInstance | null {
+    const def = equipmentLibrary.find((d) => d.id === defId);
+    if (!def) return null;
+
+    if (def.category === 'signal-gen') {
+      return this.createSourceNode(nodeId, 'sine');
+    }
+    if (def.category === 'microphone') {
+      return this.createSourceNode(nodeId, 'noise');
+    }
+    if (def.category === 'source') {
+      const source = this.createSourceNode(nodeId, 'sine');
+      if (!source) return null;
+      const freq =
+        defId === 'kick-drum-src'
+          ? 60
+          : defId === 'vocal-track-src'
+            ? 220
+            : defId === 'bass-guitar-src'
+              ? 110
+              : 180;
+      this.setFrequency(nodeId, freq);
+      this.setNodeGain(nodeId, defId === 'kick-drum-src' ? 0.85 : 0.7);
+      return source;
+    }
+    return this.ensurePatchNode(nodeId, defId);
   }
 
   /**

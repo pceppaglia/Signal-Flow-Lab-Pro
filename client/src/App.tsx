@@ -1,6 +1,6 @@
 import React from 'react';
 import { Switch, Route } from "wouter";
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from "@/components/ui/sonner";
 import NotFound from "@/pages/NotFound";
 import Home from './pages/Home';
 import Lab from './components/studio/Lab';

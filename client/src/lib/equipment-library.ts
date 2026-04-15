@@ -7,7 +7,7 @@
 export type SignalLevel = 'mic' | 'line' | 'speaker' | 'digital';
 
 export type EquipmentCategory = 
-  | 'microphone' | 'preamp' | 'compressor' | 'eq' 
+  | 'source' | 'microphone' | 'preamp' | 'compressor' | 'eq' 
   | 'reverb' | 'delay' | 'effects' | 'monitor' | 'interface' 
   | 'amp' | 'patchbay' | 'signal-gen' | 'console';
 
@@ -54,6 +54,51 @@ const genPorts = (count: number, prefix: string, type: SignalLevel = 'line') =>
   }));
 
 export const equipmentLibrary: EquipmentDef[] = [
+  {
+    id: 'kick-drum-src',
+    name: 'Live Kick Drum',
+    brand: 'SignalFlow',
+    model: 'DYNAMICS-1',
+    category: 'source',
+    description: "Engineer's Note: close-mic kick transients are fast and benefit from clean preamp headroom.",
+    educationalTip: "Treat this as a live mic source. Keep preamp gain conservative to preserve punch.",
+    width: 200,
+    heightUnits: 0,
+    accentColor: '#FFD700',
+    inputs: [],
+    outputs: [{ id: 'out', label: 'XLR', type: 'mic', position: 0.5 }],
+    controls: [],
+  },
+  {
+    id: 'vocal-track-src',
+    name: 'Studio Vocal Track',
+    brand: 'SignalFlow',
+    model: 'VOX-1',
+    category: 'source',
+    description: "Engineer's Note: a pre-recorded vocal source for gain staging and compression drills.",
+    educationalTip: 'Use this source to compare serial compressor tone and threshold behavior.',
+    width: 200,
+    heightUnits: 0,
+    accentColor: '#FFD700',
+    inputs: [],
+    outputs: [{ id: 'out', label: 'XLR', type: 'mic', position: 0.5 }],
+    controls: [],
+  },
+  {
+    id: 'bass-guitar-src',
+    name: 'Electric Bass (DI)',
+    brand: 'SignalFlow',
+    model: 'BASS-DI',
+    category: 'source',
+    description: "Engineer's Note: DI bass is line-level and generally needs less preamp gain than microphones.",
+    educationalTip: 'Line-level DI feeds should bypass mic pre gain whenever possible.',
+    width: 200,
+    heightUnits: 0,
+    accentColor: '#FFD700',
+    inputs: [],
+    outputs: [{ id: 'out', label: 'TS', type: 'line', position: 0.5 }],
+    controls: [],
+  },
   {
     id: 'sig-gen-pro',
     name: 'Signal Generator Pro',
