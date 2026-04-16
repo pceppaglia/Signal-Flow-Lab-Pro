@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 const ROUTES: MixerRoute[] = ['master', 'sub12', 'sub34', 'sub56', 'sub78'];
 
 type CollapsibleSection = 'input' | 'dyn' | 'eq' | 'aux' | 'fader';
+type KnobTone = 'input' | 'eq' | 'aux' | 'neutral';
 
 interface ChannelUI {
   trim: number;
@@ -56,7 +57,7 @@ function defaultChannel(): ChannelUI {
 }
 
 function LedMeter({ level }: { level: number }) {
-  const segs = 14;
+  const segs = 20;
   const lit = Math.round(level * segs);
   return (
     <div className="flex h-16 w-full max-w-[22px] flex-col-reverse gap-px rounded border border-white/10 bg-black/50 p-px">
@@ -83,16 +84,26 @@ function MiniKnob({
   value,
   min,
   max,
+  tone = 'neutral',
   onChange,
 }: {
   label: string;
   value: number;
   min: number;
   max: number;
+  tone?: KnobTone;
   onChange: (v: number) => void;
 }) {
+  const toneCls =
+    tone === 'input'
+      ? 'accent-red-500'
+      : tone === 'eq'
+        ? 'accent-sky-500'
+        : tone === 'aux'
+          ? 'accent-emerald-500'
+          : 'accent-amber-500';
   return (
-    <label className="flex w-11 flex-col items-center gap-0.5">
+    <label className="flex w-11 flex-col items-center gap-0.5 rounded bg-black/20 p-0.5">
       <input
         type="range"
         min={min}
@@ -100,7 +111,7 @@ function MiniKnob({
         step={(max - min) / 100}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="h-1 w-full cursor-pointer accent-amber-500"
+        className={cn('h-1 w-full cursor-pointer', toneCls)}
       />
       <span className="text-[7px] font-bold uppercase tracking-tight text-zinc-500">{label}</span>
     </label>
@@ -141,10 +152,12 @@ function GlowBtn({
 function SectionHead({
   label,
   collapsed,
+  summary,
   onToggle,
 }: {
   label: string;
   collapsed: boolean;
+  summary?: string;
   onToggle: () => void;
 }) {
   return (
@@ -153,22 +166,82 @@ function SectionHead({
       onClick={onToggle}
       className="mb-1 w-full rounded bg-gradient-to-r from-zinc-700/50 to-zinc-800/30 px-1 py-0.5 text-left text-[8px] font-bold uppercase tracking-widest text-zinc-300 hover:from-zinc-600/60"
     >
-      {label} {collapsed ? '▸' : '▾'}
+      <span>{label} {collapsed ? '▸' : '▾'}</span>
+      {collapsed && summary ? (
+        <span className="ml-1 inline-flex items-center gap-1 text-[7px] text-emerald-300/85">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+          {summary}
+        </span>
+      ) : null}
     </button>
   );
 }
 
-const ProfessionalMixerConsole: React.FC = () => {
+function LongThrowFader({
+  value,
+  onChange,
+  accent = 'amber',
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  accent?: 'amber' | 'red' | 'cyan';
+}) {
+  const capCls =
+    accent === 'red'
+      ? 'from-rose-100 via-rose-300 to-rose-700 border-rose-900/70'
+      : accent === 'cyan'
+        ? 'from-slate-100 via-cyan-100 to-slate-500 border-slate-800/70'
+        : 'from-zinc-100 via-zinc-300 to-zinc-600 border-zinc-800/70';
+  const marks = ['+10', '+5', '0', '-5', '-10', '-20', '∞'];
+  return (
+    <div className="relative mx-auto flex h-36 w-9 items-center justify-center rounded border border-white/10 bg-[#0a0a0a]">
+      <div className="absolute left-1 top-2 bottom-2 w-[2px] rounded bg-zinc-700/70" />
+      <div className="absolute right-[3px] top-2 bottom-2 flex flex-col justify-between text-[6px] text-zinc-500">
+        {marks.map((m) => (
+          <span key={m}>{m}</span>
+        ))}
+      </div>
+      <input
+        type="range"
+        min={0}
+        max={1}
+        step={0.01}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+      />
+      <div
+        className={cn(
+          'pointer-events-none absolute left-1/2 h-4 w-7 -translate-x-1/2 rounded border bg-gradient-to-b shadow',
+          capCls
+        )}
+        style={{ top: `${8 + (1 - value) * 112}px` }}
+      >
+        <div className="absolute left-1/2 top-0.5 h-3 w-px -translate-x-1/2 bg-black/60" />
+      </div>
+    </div>
+  );
+}
+
+function BusCompNeedle({ drive }: { drive: number }) {
+  const ang = -60 + drive * 120;
+  return (
+    <div className="relative mx-auto h-14 w-24 rounded border border-white/15 bg-[#101215]">
+      <div className="absolute inset-x-2 top-1 h-6 rounded bg-[#f3ecd7]" />
+      <div
+        className="absolute left-1/2 top-6 h-[2px] w-8 origin-left bg-red-700"
+        style={{ transform: `rotate(${ang}deg)` }}
+      />
+      <div className="absolute bottom-1 w-full text-center text-[7px] font-bold text-zinc-400">GR</div>
+    </div>
+  );
+}
+
+const ProfessionalMixerConsole: React.FC<{ className?: string }> = ({ className }) => {
   const [channelCount, setChannelCount] = useState(4);
   const [scale, setScale] = useState(1);
   const [meterFrame, setMeterFrame] = useState(0);
-  const [collapsed, setCollapsed] = useState<Record<CollapsibleSection, boolean>>({
-    input: false,
-    dyn: false,
-    eq: false,
-    aux: false,
-    fader: false,
-  });
+  const [collapsed, setCollapsed] = useState<Record<number, Record<CollapsibleSection, boolean>>>({});
   const [channels, setChannels] = useState<ChannelUI[]>(() =>
     Array.from({ length: 24 }, () => defaultChannel())
   );
@@ -188,8 +261,19 @@ const ProfessionalMixerConsole: React.FC = () => {
     false,
   ]);
 
-  const toggleSection = useCallback((s: CollapsibleSection) => {
-    setCollapsed((prev) => ({ ...prev, [s]: !prev[s] }));
+  const toggleSection = useCallback((ch: number, s: CollapsibleSection) => {
+    setCollapsed((prev) => ({
+      ...prev,
+      [ch]: {
+        input: false,
+        dyn: false,
+        eq: false,
+        aux: false,
+        fader: false,
+        ...(prev[ch] ?? {}),
+        [s]: !(prev[ch]?.[s] ?? false),
+      },
+    }));
   }, []);
 
   const applyChannel = useCallback((idx1: number, partial: Partial<ChannelUI>) => {
@@ -291,7 +375,10 @@ const ProfessionalMixerConsole: React.FC = () => {
 
   return (
     <div
-      className="flex shrink-0 flex-col border-t border-amber-900/30 bg-gradient-to-b from-[#252a32] via-[#1c2026] to-[#14181c] shadow-[0_-8px_32px_rgba(0,0,0,0.45)]"
+      className={cn(
+        'flex min-h-0 shrink-0 flex-col border-t border-amber-900/30 bg-gradient-to-b from-[#252a32] via-[#1c2026] to-[#14181c] shadow-[0_-8px_32px_rgba(0,0,0,0.45)]',
+        className
+      )}
       style={{ fontFamily: 'system-ui, sans-serif' }}
     >
       <div className="flex items-center justify-between border-b border-white/10 px-3 py-1">
@@ -314,20 +401,11 @@ const ProfessionalMixerConsole: React.FC = () => {
               className="h-1 w-20 accent-amber-500"
             />
           </label>
-          {channelCount < 24 && (
-            <button
-              type="button"
-              onClick={() => setChannelCount((c) => Math.min(24, c + 1))}
-              className="rounded-full border border-amber-500/50 bg-amber-500/15 px-2 py-0.5 text-xs font-bold text-amber-100 shadow-[0_0_12px_rgba(251,191,36,0.25)] hover:bg-amber-500/25"
-            >
-              + Ch
-            </button>
-          )}
         </div>
       </div>
 
       <div
-        className="flex min-h-[200px] max-h-[min(40vh,380px)] flex-1 overflow-x-auto overflow-y-hidden"
+        className="flex min-h-0 flex-1 overflow-x-auto overflow-y-hidden"
         style={{ scrollbarGutter: 'stable' }}
       >
         <div
@@ -341,10 +419,17 @@ const ProfessionalMixerConsole: React.FC = () => {
             const ch = channels[idx - 1]!;
             const level =
               meterFrame >= 0 ? audioEngine.getFoundationalMixerChannelMeter(idx) : 0;
+            const cState = collapsed[idx] ?? {
+              input: false,
+              dyn: false,
+              eq: false,
+              aux: false,
+              fader: false,
+            };
             return (
               <div
                 key={idx}
-                className="flex w-[118px] shrink-0 flex-col rounded-lg border border-white/10 bg-gradient-to-b from-[#3a4149]/40 to-[#1e2228]/90 p-1.5 shadow-inner"
+                className="flex w-[126px] shrink-0 flex-col rounded-lg border border-white/10 bg-gradient-to-b from-[#2b3138] to-[#151a21] p-1.5 shadow-inner"
               >
                 <div className="mb-1 flex justify-center">
                   <LedMeter level={level} />
@@ -353,16 +438,18 @@ const ProfessionalMixerConsole: React.FC = () => {
 
                 <SectionHead
                   label="Input"
-                  collapsed={collapsed.input}
-                  onToggle={() => toggleSection('input')}
+                  collapsed={cState.input}
+                  summary={ch.micLine === 'mic' ? 'MIC IN' : 'LINE IN'}
+                  onToggle={() => toggleSection(idx, 'input')}
                 />
-                {!collapsed.input && (
+                {!cState.input && (
                   <div className="mt-1 space-y-1 border-t border-white/5 pt-1">
                     <MiniKnob
                       label="Gain"
                       value={ch.trim}
                       min={0}
                       max={1.5}
+                      tone="input"
                       onChange={(v) => {
                         applyChannel(idx, { trim: v });
                         audioEngine.setFoundationalMixerChannelParam(idx, 'trim', v);
@@ -439,10 +526,11 @@ const ProfessionalMixerConsole: React.FC = () => {
 
                 <SectionHead
                   label="Dynamics"
-                  collapsed={collapsed.dyn}
-                  onToggle={() => toggleSection('dyn')}
+                  collapsed={cState.dyn}
+                  summary={ch.dynBypass ? 'DYN BYP' : 'DYN IN'}
+                  onToggle={() => toggleSection(idx, 'dyn')}
                 />
-                {!collapsed.dyn && (
+                {!cState.dyn && (
                   <div className="mt-1 space-y-1 border-t border-white/5 pt-1">
                     <GlowBtn
                       active={!ch.dynBypass}
@@ -458,6 +546,7 @@ const ProfessionalMixerConsole: React.FC = () => {
                     <MiniKnob
                       label="Thr"
                       value={ch.compThresh}
+                      tone="input"
                       min={-40}
                       max={0}
                       onChange={(v) => {
@@ -468,6 +557,7 @@ const ProfessionalMixerConsole: React.FC = () => {
                     <MiniKnob
                       label="Ratio"
                       value={ch.compRatio}
+                      tone="input"
                       min={1}
                       max={12}
                       onChange={(v) => {
@@ -480,10 +570,11 @@ const ProfessionalMixerConsole: React.FC = () => {
 
                 <SectionHead
                   label="EQ"
-                  collapsed={collapsed.eq}
-                  onToggle={() => toggleSection('eq')}
+                  collapsed={cState.eq}
+                  summary="EQ IN"
+                  onToggle={() => toggleSection(idx, 'eq')}
                 />
-                {!collapsed.eq && (
+                {!cState.eq && (
                   <div className="mt-1 space-y-1 border-t border-white/5 pt-1">
                     {(
                       [
@@ -497,6 +588,7 @@ const ProfessionalMixerConsole: React.FC = () => {
                         key={key}
                         label={label}
                         value={val}
+                        tone="eq"
                         min={-12}
                         max={12}
                         onChange={(v) => {
@@ -514,16 +606,18 @@ const ProfessionalMixerConsole: React.FC = () => {
 
                 <SectionHead
                   label="Aux"
-                  collapsed={collapsed.aux}
-                  onToggle={() => toggleSection('aux')}
+                  collapsed={cState.aux}
+                  summary="AUX SEND"
+                  onToggle={() => toggleSection(idx, 'aux')}
                 />
-                {!collapsed.aux && (
+                {!cState.aux && (
                   <div className="mt-1 space-y-1 border-t border-white/5 pt-1">
                     {[0, 1, 2, 3].map((a) => (
                       <div key={a} className="flex items-center gap-0.5">
                         <MiniKnob
                           label={`A${a + 1}`}
                           value={ch.aux[a]!}
+                          tone="aux"
                           min={0}
                           max={1}
                           onChange={(v) => {
@@ -560,14 +654,16 @@ const ProfessionalMixerConsole: React.FC = () => {
 
                 <SectionHead
                   label="Fader"
-                  collapsed={collapsed.fader}
-                  onToggle={() => toggleSection('fader')}
+                  collapsed={cState.fader}
+                  summary={ch.route === 'master' ? 'ROUTE LR' : 'ROUTE SUB'}
+                  onToggle={() => toggleSection(idx, 'fader')}
                 />
-                {!collapsed.fader && (
+                {!cState.fader && (
                   <div className="mt-1 flex flex-1 flex-col border-t border-white/5 pt-1">
                     <MiniKnob
                       label="Pan"
                       value={ch.pan}
+                      tone="neutral"
                       min={-1}
                       max={1}
                       onChange={(v) => {
@@ -597,22 +693,13 @@ const ProfessionalMixerConsole: React.FC = () => {
                         S
                       </GlowBtn>
                     </div>
-                    <div className="mx-auto flex h-24 w-8 items-center justify-center rounded bg-black/50 p-px">
-                      <input
-                        type="range"
-                        min={0}
-                        max={1}
-                        step={0.01}
-                        value={ch.fader}
-                        onChange={(e) => {
-                          const v = Number(e.target.value);
-                          applyChannel(idx, { fader: v });
-                          audioEngine.setFoundationalMixerChannelParam(idx, 'fader', v);
-                        }}
-                        className="h-24 w-4 cursor-pointer appearance-none bg-transparent accent-amber-500"
-                        style={{ transform: 'rotate(-90deg)', width: '96px', height: '24px' }}
-                      />
-                    </div>
+                    <LongThrowFader
+                      value={ch.fader}
+                      onChange={(v) => {
+                        applyChannel(idx, { fader: v });
+                        audioEngine.setFoundationalMixerChannelParam(idx, 'fader', v);
+                      }}
+                    />
                     <div className="mt-1 flex flex-wrap justify-center gap-0.5">
                       {ROUTES.map((r) => (
                         <GlowBtn
@@ -643,7 +730,7 @@ const ProfessionalMixerConsole: React.FC = () => {
           })}
 
           {/* Master */}
-          <div className="sticky right-0 flex w-[200px] shrink-0 flex-col rounded-lg border border-amber-700/30 bg-gradient-to-b from-[#2c323a] to-[#181c22] p-2 shadow-lg">
+          <div className="sticky right-0 flex w-[210px] shrink-0 flex-col rounded-lg border border-amber-700/30 bg-gradient-to-b from-[#2c323a] to-[#181c22] p-2 shadow-lg">
             <div className="text-[9px] font-bold uppercase tracking-widest text-amber-200/80">
               Master
             </div>
@@ -678,6 +765,7 @@ const ProfessionalMixerConsole: React.FC = () => {
                       value={subPan[s]!}
                       min={-1}
                       max={1}
+                      tone="neutral"
                       onChange={(v) =>
                         setSubPan((p) => {
                           const n = [...p] as typeof p;
@@ -754,29 +842,40 @@ const ProfessionalMixerConsole: React.FC = () => {
                 value={busDrive}
                 min={0}
                 max={1}
+                tone="input"
                 onChange={setBusDrive}
               />
+              <BusCompNeedle drive={busDrive} />
             </div>
             <div className="mt-2 flex flex-1 flex-col items-center border-t border-white/10 pt-2">
               <GlowBtn active={masterMute} onClick={() => setMasterMute((m) => !m)}>
                 Mute
               </GlowBtn>
-              <div className="mt-1 flex h-28 w-10 items-center justify-center">
-                <input
-                  type="range"
-                  min={0}
-                  max={1}
-                  step={0.01}
-                  value={masterFader}
-                  onChange={(e) => setMasterFader(Number(e.target.value))}
-                  className="cursor-pointer appearance-none bg-transparent accent-amber-400"
-                  style={{ transform: 'rotate(-90deg)', width: '112px', height: '28px' }}
-                />
+              <div className="mt-1">
+                <LongThrowFader value={masterFader} onChange={setMasterFader} accent="red" />
               </div>
               <span className="text-[7px] text-zinc-500">Stereo master</span>
             </div>
           </div>
         </div>
+      </div>
+      <div className="flex items-center justify-between border-t border-white/10 bg-[#11161c] px-2 py-1">
+        <span className="text-[8px] uppercase tracking-widest text-zinc-500">
+          Scroll strips horizontally for extended desk
+        </span>
+        <button
+          type="button"
+          disabled={channelCount >= 24}
+          onClick={() => setChannelCount((c) => Math.min(24, c + 1))}
+          className={cn(
+            'rounded-full border px-2.5 py-0.5 text-[10px] font-bold',
+            channelCount >= 24
+              ? 'cursor-not-allowed border-zinc-700/40 bg-zinc-900/40 text-zinc-600'
+              : 'border-emerald-400/45 bg-emerald-600/20 text-emerald-200 hover:bg-emerald-600/30'
+          )}
+        >
+          + CH
+        </button>
       </div>
     </div>
   );

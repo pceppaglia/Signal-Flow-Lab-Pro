@@ -566,6 +566,8 @@ class AudioEngineV2 {
     this.micToPreampLinks.forEach((_, micId) => {
       this.refreshCondenserPhantomGate(micId);
     });
+
+    this.reapplyAllRackPowerGates();
   }
 
   registerNodeProfile(
@@ -574,6 +576,7 @@ class AudioEngineV2 {
     state: Record<string, unknown> = {}
   ): void {
     this.nodeProfiles.set(nodeId, { defId, state: { ...state } });
+    this.applyRackPowerOutputGate(nodeId);
   }
 
   updateNodeState(nodeId: string, key: string, value: unknown): void {
@@ -585,6 +588,32 @@ class AudioEngineV2 {
     if (key === 'phantom' || key === 'phantomPower') {
       this.refreshLinkedMicrophonesForPreamp(nodeId);
     }
+    if (key === 'power') {
+      this.applyRackPowerOutputGate(nodeId);
+    }
+  }
+
+  private isRackMountProfile(nodeId: string): boolean {
+    if (nodeId.startsWith(FOUNDATIONAL_MIXER_CH_PREFIX)) return false;
+    const prof = this.nodeProfiles.get(nodeId);
+    if (!prof) return false;
+    const def = equipmentLibrary.find((d) => d.id === prof.defId);
+    return Boolean(def && def.heightUnits > 0);
+  }
+
+  /** When `state.power` is false, rack gear output is silenced at the patch output gain. */
+  private applyRackPowerOutputGate(nodeId: string): void {
+    const inst = this.nodeRegistry.get(nodeId);
+    if (!inst || !this.ctx) return;
+    if (!this.isRackMountProfile(nodeId)) return;
+    const prof = this.nodeProfiles.get(nodeId);
+    const on = prof ? prof.state.power !== false : true;
+    const g = on ? 1 : 0;
+    inst.outputNode.gain.setTargetAtTime(g, this.ctx.currentTime, 0.02);
+  }
+
+  private reapplyAllRackPowerGates(): void {
+    this.nodeProfiles.forEach((_, id) => this.applyRackPowerOutputGate(id));
   }
 
   /**

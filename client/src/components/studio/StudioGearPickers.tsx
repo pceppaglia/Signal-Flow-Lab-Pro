@@ -72,9 +72,15 @@ function GearRow({
 
 interface StudioGearPickersProps {
   onPick: (defId: string) => void;
+  stageButtonStyle?: React.CSSProperties;
+  rackButtonStyle?: React.CSSProperties;
 }
 
-const StudioGearPickers: React.FC<StudioGearPickersProps> = ({ onPick }) => {
+const StudioGearPickers: React.FC<StudioGearPickersProps> = ({
+  onPick,
+  stageButtonStyle,
+  rackButtonStyle,
+}) => {
   const rackByTab = UI_RACK_TAB_ORDER.reduce(
     (acc, tab) => {
       acc[tab] = equipmentLibrary.filter((d) => getRackPickerTab(d) === tab);
@@ -97,8 +103,9 @@ const StudioGearPickers: React.FC<StudioGearPickersProps> = ({ onPick }) => {
         <PopoverTrigger asChild>
           <button
             type="button"
+            style={stageButtonStyle}
             className={cn(
-              'pointer-events-auto absolute left-[max(1rem,8%)] top-[42%] z-40 -translate-y-1/2',
+              'pointer-events-auto absolute z-40 -translate-x-1/2 -translate-y-1/2',
               'flex items-center gap-2 rounded-lg border border-white/15 bg-black/75 px-3 py-2',
               'text-[11px] font-bold uppercase tracking-wide text-white/90 shadow-lg backdrop-blur-md',
               'hover:border-amber-400/50 hover:bg-amber-500/15'
@@ -152,8 +159,9 @@ const StudioGearPickers: React.FC<StudioGearPickersProps> = ({ onPick }) => {
         <PopoverTrigger asChild>
           <button
             type="button"
+            style={rackButtonStyle}
             className={cn(
-              'pointer-events-auto absolute right-[max(1rem,10%)] top-[42%] z-40 -translate-y-1/2',
+              'pointer-events-auto absolute z-40 -translate-x-1/2 -translate-y-1/2',
               'flex items-center gap-2 rounded-lg border border-white/15 bg-black/75 px-3 py-2',
               'text-[11px] font-bold uppercase tracking-wide text-white/90 shadow-lg backdrop-blur-md',
               'hover:border-amber-400/50 hover:bg-amber-500/15'

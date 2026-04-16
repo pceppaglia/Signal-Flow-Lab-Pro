@@ -196,6 +196,47 @@ export default function InspectorPanel({ node, def, onUpdateSetting, onRemove, a
 
       {/* Controls */}
       <div className="flex-1 overflow-y-auto p-3 space-y-4">
+        {def.heightUnits > 0 && (
+          <div className="rounded border border-[#2a2a2a] bg-[#0d0d0d] p-3">
+            <div className="text-[10px] text-[#555] tracking-wider mb-2 font-bold">POWER</div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() =>
+                  onUpdateSetting('power', !Boolean(node.settings.power ?? true))
+                }
+                className={`relative h-7 w-12 rounded-full transition-colors ${
+                  Boolean(node.settings.power ?? true) ? 'bg-[#E8A020]' : 'bg-[#333]'
+                }`}
+                aria-pressed={Boolean(node.settings.power ?? true)}
+              >
+                <span
+                  className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                    Boolean(node.settings.power ?? true) ? 'left-6' : 'left-1'
+                  }`}
+                />
+              </button>
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[10px] text-[#A89F94]">Rack power</span>
+                <span
+                  className={`inline-flex items-center gap-1.5 text-[10px] font-bold ${
+                    Boolean(node.settings.power ?? true) ? 'text-emerald-400' : 'text-[#555]'
+                  }`}
+                >
+                  <span
+                    className={`h-2 w-2 rounded-full ${
+                      Boolean(node.settings.power ?? true)
+                        ? 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]'
+                        : 'bg-zinc-600'
+                    }`}
+                  />
+                  {Boolean(node.settings.power ?? true) ? 'ON' : 'OFF'}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Selects */}
         {selects.length > 0 && (
           <div className="space-y-2">

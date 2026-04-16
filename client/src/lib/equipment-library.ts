@@ -4,10 +4,17 @@
  * Provides types and definitions for skeuomorphic rendering and audio routing.
  */
 
+import { RACK_WIDTH_PX } from '@/lib/studio-layout';
+
 export type SignalLevel = 'mic' | 'line' | 'speaker' | 'digital';
 
 /** Standard faceplate width for rack-mount modules (matches `RACK_WIDTH_PX` bay). */
-export const STANDARD_RACK_FACE_WIDTH = 600;
+export const STANDARD_RACK_FACE_WIDTH = RACK_WIDTH_PX;
+
+/** Default UI/engine state for rack-mount modules (`heightUnits > 0`). */
+export function defaultRackEquipmentState(): { power: boolean } {
+  return { power: true };
+}
 
 export type EquipmentCategory = 
   | 'source' | 'microphone' | 'preamp' | 'compressor' | 'eq' 
@@ -128,7 +135,7 @@ export const equipmentLibrary: EquipmentDef[] = [
     model: 'SGP-1',
     category: 'signal-gen',
     description: 'Reference tone and noise generator for calibration and test routing.',
-    width: 600,
+    width: RACK_WIDTH_PX,
     heightUnits: 1,
     accentColor: '#00a8ff',
     inputs: [],
@@ -182,7 +189,7 @@ export const equipmentLibrary: EquipmentDef[] = [
     model: '1073',
     category: 'preamp',
     description: 'The industry-standard transformer-balanced preamp. Deep, authoritative low end.',
-    width: 600,
+    width: RACK_WIDTH_PX,
     heightUnits: 1,
     accentColor: '#d91e1e',
     inputs: [{ id: 'mic-in', label: 'MIC', type: 'mic', position: 0.3 }, { id: 'line-in', label: 'LINE', type: 'line', position: 0.7 }],
@@ -204,7 +211,7 @@ export const equipmentLibrary: EquipmentDef[] = [
     model: '512c',
     category: 'preamp',
     description: 'American discrete preamp design. Punchy mids and fast transients.',
-    width: 600,
+    width: RACK_WIDTH_PX,
     heightUnits: 1,
     accentColor: '#0054a6',
     inputs: [{ id: 'mic-in', label: 'MIC', type: 'mic', position: 0.3 }, { id: 'inst-in', label: 'INST', type: 'line', position: 0.7 }],
@@ -223,7 +230,7 @@ export const equipmentLibrary: EquipmentDef[] = [
     model: 'VHD-1',
     category: 'preamp',
     description: 'SuperAnalogue SSL circuitry with Variable Harmonic Drive.',
-    width: 600,
+    width: RACK_WIDTH_PX,
     heightUnits: 1,
     accentColor: '#666666',
     inputs: [{ id: 'in', label: 'INPUT', type: 'mic', position: 0.5 }],
@@ -243,7 +250,7 @@ export const equipmentLibrary: EquipmentDef[] = [
     model: '1176LN',
     category: 'compressor',
     description: 'Fastest FET compressor ever made. Iconic for drums.',
-    width: 600,
+    width: RACK_WIDTH_PX,
     heightUnits: 2,
     accentColor: '#111111',
     inputs: [{ id: 'in', label: 'IN', type: 'line', position: 0.5 }],
@@ -276,7 +283,7 @@ export const equipmentLibrary: EquipmentDef[] = [
     model: 'LA-2A',
     category: 'compressor',
     description: 'Legendary tube optical compressor. Smooth, program-dependent leveling.',
-    width: 600,
+    width: RACK_WIDTH_PX,
     heightUnits: 3,
     accentColor: '#c0c0c8',
     inputs: [{ id: 'in', label: 'IN', type: 'line', position: 0.5 }],
@@ -295,7 +302,7 @@ export const equipmentLibrary: EquipmentDef[] = [
     model: 'Mix-Glue',
     category: 'compressor',
     description: 'The master bus compressor from the G-Series console.',
-    width: 600,
+    width: RACK_WIDTH_PX,
     heightUnits: 1,
     accentColor: '#444444',
     inputs: [{ id: 'in-l', label: 'L', type: 'line', position: 0.3 }, { id: 'in-r', label: 'R', type: 'line', position: 0.7 }],
@@ -313,7 +320,7 @@ export const equipmentLibrary: EquipmentDef[] = [
     model: '160',
     category: 'compressor',
     description: 'Hard-knee VCA compression. Precise and punchy.',
-    width: 600,
+    width: RACK_WIDTH_PX,
     heightUnits: 1,
     accentColor: '#000000',
     inputs: [{ id: 'in', label: 'IN', type: 'line', position: 0.5 }],
@@ -332,7 +339,7 @@ export const equipmentLibrary: EquipmentDef[] = [
     model: 'EQP-1A',
     category: 'eq',
     description: 'Passive tube EQ. Famous for low-end "Pultec trick".',
-    width: 600,
+    width: RACK_WIDTH_PX,
     heightUnits: 2,
     accentColor: '#2a303b',
     inputs: [{ id: 'in', label: 'IN', type: 'line', position: 0.5 }],
@@ -354,7 +361,7 @@ export const equipmentLibrary: EquipmentDef[] = [
     model: '4000-EQ',
     category: 'eq',
     description: 'Surgical yet musical EQ from the classic 4000E console.',
-    width: 600,
+    width: RACK_WIDTH_PX,
     heightUnits: 1,
     accentColor: '#333333',
     inputs: [{ id: 'in', label: 'IN', type: 'line', position: 0.5 }],
@@ -373,7 +380,7 @@ export const equipmentLibrary: EquipmentDef[] = [
     model: '480L',
     category: 'effects',
     description: 'Benchmark digital reverb for elite studios.',
-    width: 600,
+    width: RACK_WIDTH_PX,
     heightUnits: 4,
     accentColor: '#dddddd',
     inputs: [{ id: 'in-l', label: 'L', type: 'line', position: 0.3 }, { id: 'in-r', label: 'R', type: 'line', position: 0.7 }],
@@ -390,7 +397,7 @@ export const equipmentLibrary: EquipmentDef[] = [
     model: 'RE-201',
     category: 'effects',
     description: 'Classic tape echo with spring reverb.',
-    width: 600,
+    width: RACK_WIDTH_PX,
     heightUnits: 3,
     accentColor: '#1a4a1a',
     inputs: [{ id: 'in', label: 'IN', type: 'line', position: 0.5 }],
@@ -409,7 +416,7 @@ export const equipmentLibrary: EquipmentDef[] = [
     model: '48-TRS',
     category: 'patchbay',
     description: 'Standard studio patchbay for flexible routing.',
-    width: 600,
+    width: RACK_WIDTH_PX,
     heightUnits: 1,
     accentColor: '#888888',
     inputs: genPorts(24, 'top', 'line'),
@@ -423,7 +430,7 @@ export const equipmentLibrary: EquipmentDef[] = [
     model: 'XLi-800',
     category: 'amp',
     description: 'Reliable power for passive studio monitoring.',
-    width: 600,
+    width: RACK_WIDTH_PX,
     heightUnits: 2,
     accentColor: '#111111',
     inputs: [{ id: 'in-l', label: 'L', type: 'line', position: 0.3 }, { id: 'in-r', label: 'R', type: 'line', position: 0.7 }],
@@ -441,7 +448,7 @@ export const equipmentLibrary: EquipmentDef[] = [
     model: 'Apollo-x8p',
     category: 'interface',
     description: 'Professional 18x22 interface with Unison preamps.',
-    width: 600,
+    width: RACK_WIDTH_PX,
     heightUnits: 1,
     accentColor: '#222222',
     inputs: genPorts(8, 'in', 'mic'),
@@ -501,7 +508,7 @@ export const equipmentLibrary: EquipmentDef[] = [
     model: '1176LN',
     category: 'compressor',
     description: 'Silver-face FET limiter with ultra-fast transient control.',
-    width: 600,
+    width: RACK_WIDTH_PX,
     heightUnits: 2,
     accentColor: '#c5c6ca',
     inputs: [{ id: 'in', label: 'IN', type: 'line', position: 0.5 }],
@@ -521,7 +528,7 @@ export const equipmentLibrary: EquipmentDef[] = [
     model: 'LA-2A',
     category: 'compressor',
     description: 'Gray-face optical leveling amp with musical gain reduction.',
-    width: 600,
+    width: RACK_WIDTH_PX,
     heightUnits: 3,
     accentColor: '#bdbdc2',
     inputs: [{ id: 'in', label: 'IN', type: 'line', position: 0.5 }],
@@ -539,8 +546,8 @@ export const equipmentLibrary: EquipmentDef[] = [
     model: 'PMC-32',
     category: 'console',
     description:
-      'Modular 600mm inline console: 12U rack centerpiece; patch line-level sources to channel inputs and mains to the room.',
-    width: 600,
+      'Modular inline console: 12U rack centerpiece; patch line-level sources to channel inputs and mains to the room.',
+    width: RACK_WIDTH_PX,
     heightUnits: 12,
     accentColor: '#2d2d2d',
     inputs: [
@@ -584,7 +591,7 @@ export const equipmentLibrary: EquipmentDef[] = [
     model: 'VX-1604',
     category: 'console',
     description: 'Compact 16-channel utility mixer.',
-    width: 600,
+    width: RACK_WIDTH_PX,
     heightUnits: 12,
     accentColor: '#222222',
     inputs: genPorts(16, 'ch-in', 'line'),
@@ -600,7 +607,7 @@ export const equipmentLibrary: EquipmentDef[] = [
     model: 'Pearl',
     category: 'console',
     description: 'High-end analog recording console.',
-    width: 600,
+    width: RACK_WIDTH_PX,
     heightUnits: 18,
     accentColor: '#3d4449',
     inputs: genPorts(24, 'ch-in', 'mic'),
@@ -614,7 +621,7 @@ export const equipmentLibrary: EquipmentDef[] = [
     model: '4000-G',
     category: 'console',
     description: 'The definitive rock and pop mixing console.',
-    width: 600,
+    width: RACK_WIDTH_PX,
     heightUnits: 20,
     accentColor: '#444444',
     inputs: genPorts(32, 'ch-in', 'mic'),

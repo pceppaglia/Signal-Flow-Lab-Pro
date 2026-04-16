@@ -6,7 +6,12 @@ import type { EquipmentNode } from '../../../shared/equipment-types';
 import type { EquipmentDef, SignalLevel } from '@/lib/equipment-library';
 import { equipmentLibrary } from '@/lib/equipment-library';
 import type { StudioZones } from '@/lib/studio-layout';
-import { snapRackNodePosition as snapRackNodePositionFromLayout } from '@/lib/studio-layout';
+import {
+  RACK_WIDTH_PX,
+  RACK_GRID_TOP_PX,
+  RACK_GRID_BOTTOM_PX,
+  snapRackNodePosition as snapRackNodePositionFromLayout,
+} from '@/lib/studio-layout';
 
 export interface GraphicsContext {
   ctx: CanvasRenderingContext2D;
@@ -38,8 +43,44 @@ export function snapRackNodePosition(
   );
 }
 
+/** Rack ear width (px); aligns with metal rails at bay outer edges. */
+const RACK_EAR_W_PX = 18;
+
+function fillDarkWalnutPanel(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number
+): void {
+  ctx.save();
+  const g = ctx.createLinearGradient(x, y, x + w * 1.15, y + h * 0.85);
+  g.addColorStop(0, '#1a0f0a');
+  g.addColorStop(0.2, '#2a1810');
+  g.addColorStop(0.45, '#3d2418');
+  g.addColorStop(0.72, '#26160f');
+  g.addColorStop(1, '#140a08');
+  ctx.fillStyle = g;
+  ctx.fillRect(x, y, w, h);
+  ctx.globalAlpha = 0.14;
+  for (let i = 0; i < w; i += 3) {
+    ctx.strokeStyle = i % 9 === 0 ? '#5c3d2e' : '#352018';
+    ctx.lineWidth = 0.55;
+    ctx.beginPath();
+    ctx.moveTo(x + i, y);
+    ctx.lineTo(x + i + 0.8, y + h);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 0.07;
+  for (let j = 0; j < h; j += 14) {
+    ctx.fillStyle = j % 28 < 14 ? 'rgba(0,0,0,0.5)' : 'rgba(90,55,40,0.35)';
+    ctx.fillRect(x, y + j, w, 1);
+  }
+  ctx.restore();
+}
+
 /**
- * v3.0 vertical rack: 600px-wide bay centered on canvas, with punched rails and stage wings.
+ * Vertical rack: wood bay, metal rails at outer edges, stage wings.
  */
 export function drawRackRails(
   ctx: CanvasRenderingContext2D,
@@ -73,21 +114,31 @@ export function drawRackRails(
   ctx.fillStyle = stageGradR;
   ctx.fillRect(rackRight, 0, vw - rackRight, vh);
 
-  ctx.fillStyle = '#050506';
-  ctx.fillRect(rackLeft, 0, rackRight - rackLeft, vh);
-  const bayGrad = ctx.createLinearGradient(rackLeft, 0, rackRight, 0);
-  bayGrad.addColorStop(0, 'rgba(255,255,255,0.04)');
-  bayGrad.addColorStop(0.45, 'rgba(0,0,0,0.35)');
-  bayGrad.addColorStop(1, 'rgba(255,255,255,0.03)');
-  ctx.fillStyle = bayGrad;
-  ctx.fillRect(rackLeft + 10 / z, 0, rackRight - rackLeft - 20 / z, vh);
-
-  ctx.strokeStyle = 'rgba(232,160,32,0.22)';
-  ctx.lineWidth = 1.4 / z;
-  ctx.strokeRect(rackLeft + 0.5 / z, 0.5 / z, rackRight - rackLeft - 1 / z, vh - 1 / z);
-  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-  ctx.lineWidth = 0.85 / z;
-  ctx.strokeRect(rackLeft + 4 / z, 4 / z, rackRight - rackLeft - 8 / z, vh - 8 / z);
+  const bayW = rackRight - rackLeft;
+  const rackTop = RACK_GRID_TOP_PX;
+  const rackBottom = Math.min(vh - 1, RACK_GRID_BOTTOM_PX);
+  const rackH = Math.max(0, rackBottom - rackTop);
+  fillDarkWalnutPanel(ctx, rackLeft, rackTop, bayW, rackH);
+  const capH = 16;
+  const capG = ctx.createLinearGradient(rackLeft, rackTop - capH, rackLeft, rackTop);
+  capG.addColorStop(0, '#2b1a13');
+  capG.addColorStop(1, '#1a0f0a');
+  ctx.fillStyle = capG;
+  ctx.fillRect(rackLeft, rackTop - capH, bayW, capH);
+  const botG = ctx.createLinearGradient(rackLeft, rackBottom, rackLeft, rackBottom + capH);
+  botG.addColorStop(0, '#1a0f0a');
+  botG.addColorStop(1, '#2b1a13');
+  ctx.fillStyle = botG;
+  ctx.fillRect(rackLeft, rackBottom, bayW, capH);
+  const earW = RACK_EAR_W_PX;
+  ctx.fillStyle = 'rgba(8,4,2,0.38)';
+  ctx.fillRect(rackLeft + earW, rackTop, bayW - 2 * earW, rackH);
+  ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+  ctx.lineWidth = 1 / z;
+  ctx.strokeRect(rackLeft + earW + 0.5, rackTop + 0.5, bayW - 2 * earW - 1, rackH - 1);
+  ctx.strokeStyle = 'rgba(232,160,32,0.18)';
+  ctx.lineWidth = 1.2 / z;
+  ctx.strokeRect(rackLeft + 0.5 / z, rackTop + 0.5 / z, bayW - 1 / z, rackH - 1 / z);
 
   const drawPost = (cx: number) => {
     const stripW = 14 / z;
@@ -101,23 +152,23 @@ export function drawRackRails(
     g.addColorStop(0.82, '#2e3036');
     g.addColorStop(1, '#141418');
     ctx.fillStyle = g;
-    ctx.fillRect(x0, 0, stripW, vh);
+    ctx.fillRect(x0, rackTop, stripW, rackH);
     ctx.strokeStyle = 'rgba(0,0,0,0.45)';
     ctx.lineWidth = 0.6 / z;
     ctx.beginPath();
-    ctx.moveTo(x0, 0);
-    ctx.lineTo(x0, vh);
-    ctx.moveTo(x0 + stripW, 0);
-    ctx.lineTo(x0 + stripW, vh);
+    ctx.moveTo(x0, rackTop);
+    ctx.lineTo(x0, rackBottom);
+    ctx.moveTo(x0 + stripW, rackTop);
+    ctx.lineTo(x0 + stripW, rackBottom);
     ctx.stroke();
     ctx.strokeStyle = 'rgba(255,255,255,0.08)';
     ctx.beginPath();
-    ctx.moveTo(x0 + stripW * 0.35, 0);
-    ctx.lineTo(x0 + stripW * 0.35, vh);
+    ctx.moveTo(x0 + stripW * 0.35, rackTop);
+    ctx.lineTo(x0 + stripW * 0.35, rackBottom);
     ctx.stroke();
 
     const holeSpacing = 44;
-    for (let hy = 22; hy < vh - 12; hy += holeSpacing) {
+    for (let hy = rackTop + 22; hy < rackBottom - 12; hy += holeSpacing) {
       ctx.beginPath();
       ctx.fillStyle = '#0a0a0c';
       ctx.arc(cx, hy, 3.2 / z, 0, Math.PI * 2);
@@ -131,7 +182,7 @@ export function drawRackRails(
       ctx.stroke();
     }
 
-    for (let sy = 18; sy < vh - 8; sy += 52) {
+    for (let sy = rackTop + 18; sy < rackBottom - 8; sy += 52) {
       const sr = 2.4 / z;
       for (const sign of [-1, 1] as const) {
         const scx = cx + sign * stripW * 0.55;
@@ -240,16 +291,37 @@ function drawMarconiGainTicks(
   ctx.restore();
 }
 
-/** Rack ear width (px) at left [0,20) and right (580,600] of a 600px-wide module. */
-const RACK_EAR_W_PX = 20;
-
 function rackInnerMetrics(
   x: number,
   w: number
 ): { ix: number; iw: number; ears: boolean } {
-  const ears = w >= 560;
+  const ears = w >= RACK_WIDTH_PX - 8;
   if (!ears) return { ix: x, iw: w, ears: false };
   return { ix: x + RACK_EAR_W_PX, iw: w - 2 * RACK_EAR_W_PX, ears: true };
+}
+
+function drawRackEarScrew(ctx: CanvasRenderingContext2D, cx: number, cy: number): void {
+  const r = 2.1;
+  const wg = ctx.createRadialGradient(cx - 0.35, cy - 0.35, 0, cx, cy, r * 1.5);
+  wg.addColorStop(0, '#eceff4');
+  wg.addColorStop(0.65, '#8a8f98');
+  wg.addColorStop(1, '#3e4248');
+  ctx.beginPath();
+  ctx.fillStyle = wg;
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+  ctx.lineWidth = 0.45;
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(25,25,30,0.9)';
+  ctx.lineWidth = 0.55;
+  const s = 0.9;
+  ctx.beginPath();
+  ctx.moveTo(cx - s, cy);
+  ctx.lineTo(cx + s, cy);
+  ctx.moveTo(cx, cy - s);
+  ctx.lineTo(cx, cy + s);
+  ctx.stroke();
 }
 
 function drawRackEars(
@@ -260,6 +332,11 @@ function drawRackEars(
   h: number
 ): void {
   const ear = RACK_EAR_W_PX;
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.fillRect(x + 2, y + h - 2, ear - 2, 4);
+  ctx.fillRect(x + w - ear, y + h - 2, ear - 2, 4);
+  ctx.restore();
   const drawStrip = (sx: number, flip: boolean) => {
     const g = ctx.createLinearGradient(
       flip ? sx + ear : sx,
@@ -285,18 +362,69 @@ function drawRackEars(
     ctx.strokeStyle = 'rgba(0,0,0,0.45)';
     ctx.lineWidth = 1;
     ctx.strokeRect(sx + 0.5, y + 0.5, ear - 1, h - 1);
-    for (let sy = 16; sy < h - 10; sy += 52) {
-      ctx.beginPath();
-      ctx.fillStyle = '#0a0a0c';
-      ctx.arc(sx + ear * 0.5, sy, 2.2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-      ctx.lineWidth = 0.5;
-      ctx.stroke();
-    }
+    const yt = Math.min(y + 6, y + h * 0.22);
+    const yb = Math.max(y + h - 6, y + h * 0.78);
+    const xl = sx + ear * 0.28;
+    const xr = sx + ear * 0.72;
+    drawRackEarScrew(ctx, xl, yt);
+    drawRackEarScrew(ctx, xr, yt);
+    drawRackEarScrew(ctx, xl, yb);
+    drawRackEarScrew(ctx, xr, yb);
   };
   drawStrip(x, false);
   drawStrip(x + w - ear, true);
+}
+
+function rackPowerWidgetBounds(
+  node: EquipmentNode,
+  def: EquipmentDef
+): { x: number; y: number; w: number; h: number; ledX: number; ledY: number; ledR: number } | null {
+  if (def.heightUnits <= 0) return null;
+  const h = def.heightUnits * 44;
+  const bw = 26;
+  const bh = 12;
+  const bx = node.x + def.width - RACK_EAR_W_PX - bw - 7;
+  const by = node.y + 6;
+  return {
+    x: bx,
+    y: by,
+    w: bw,
+    h: bh,
+    ledX: bx - 8,
+    ledY: by + bh * 0.5,
+    ledR: 2.7,
+  };
+}
+
+function drawRackPowerWidget(
+  ctx: CanvasRenderingContext2D,
+  node: EquipmentNode,
+  def: EquipmentDef
+): void {
+  const b = rackPowerWidgetBounds(node, def);
+  if (!b) return;
+  const on = node.state?.power !== false;
+  ctx.save();
+  ctx.fillStyle = on ? '#8d2218' : '#2a1715';
+  ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.roundRect(b.x, b.y, b.w, b.h, 3);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  if (on) {
+    ctx.fillRect(b.x + 3, b.y + 2, b.w - 7, 3);
+  } else {
+    ctx.fillRect(b.x + 4, b.y + b.h - 5, b.w - 8, 3);
+  }
+  ctx.beginPath();
+  ctx.arc(b.ledX, b.ledY, b.ledR, 0, Math.PI * 2);
+  ctx.fillStyle = on ? '#64ff9a' : '#3d4b42';
+  ctx.shadowColor = on ? 'rgba(100,255,154,0.9)' : 'transparent';
+  ctx.shadowBlur = on ? 10 : 0;
+  ctx.fill();
+  ctx.restore();
 }
 
 /** Outer grey skirt + inner colored cap (classic concentric EQ stack). */
@@ -359,7 +487,7 @@ function drawBrushedFace(
   base: string,
   opts?: DrawBrushedFaceOpts
 ): void {
-  const useEars = Boolean(opts?.rackEars && w >= 560);
+  const useEars = Boolean(opts?.rackEars && w >= RACK_WIDTH_PX - 8);
   if (useEars) {
     drawRackEars(ctx, x, y, w, h);
   }
@@ -1016,7 +1144,7 @@ function renderControls(
   const oneU = h <= 44.5;
   const knobR = oneU ? 10 : 14;
   const btnS = oneU ? 8 : 12;
-  const useInner = (def.heightUnits ?? 0) > 0 && w >= 560;
+  const useInner = (def.heightUnits ?? 0) > 0 && w >= RACK_WIDTH_PX - 8;
   const { ix, iw } = useInner ? rackInnerMetrics(x, w) : { ix: x, iw: w };
 
   const drawable = def.controls.filter(
@@ -1107,7 +1235,7 @@ function renderControls(
 function renderDefault(gc: GraphicsContext): void {
   const { ctx, x, y, w, h, node } = gc;
   const def = equipmentLibrary.find((e) => e.id === node.defId);
-  const rackEars = Boolean(def && def.heightUnits > 0 && w >= 560);
+  const rackEars = Boolean(def && def.heightUnits > 0 && w >= RACK_WIDTH_PX - 8);
   drawBrushedFace(ctx, x, y, w, h, '#111', { rackEars });
   if (
     def &&
@@ -1348,6 +1476,21 @@ export function hitTestInteractiveControl(
     default:
       break;
   }
+  const power = rackPowerWidgetBounds(node, def);
+  if (
+    power &&
+    wx >= power.x - 4 &&
+    wx <= power.x + power.w + 4 &&
+    wy >= power.y - 3 &&
+    wy <= power.y + power.h + 3
+  ) {
+    return {
+      kind: 'switch',
+      nodeId: node.id,
+      controlId: 'power',
+      value: boolState(node, 'power', true),
+    };
+  }
   return null;
 }
 
@@ -1470,6 +1613,10 @@ export function renderEquipmentGraphics(gc: GraphicsContext): void {
       break;
     default:
       renderDefault(gc);
+  }
+  const thisDef = equipmentLibrary.find((e) => e.id === node.defId);
+  if (thisDef && thisDef.heightUnits > 0) {
+    drawRackPowerWidget(ctx, node, thisDef);
   }
 
   if (isSelected) {

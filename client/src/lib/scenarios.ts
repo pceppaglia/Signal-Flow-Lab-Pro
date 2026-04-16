@@ -1,18 +1,8 @@
 import type { EquipmentNode } from '../../../shared/equipment-types';
 import { equipmentLibrary } from '@/lib/equipment-library';
-import { getStudioZones } from '@/lib/studio-layout';
+import { getWorkspaceZones } from '@/lib/studio-layout';
 
-/**
- * World size used to compute rack `x` for scenario nodes. `rackLeft` = `(vw - 600) / 2`.
- * At 2600×800 this is **1000**; if your Lab `onViewportWorldSize` reports a different `vw`,
- * set this to match so rack gear spawns aligned with the 600px bay.
- */
-const SCENARIO_AUTHORING_VW = 2600;
-const SCENARIO_AUTHORING_VH = 800;
-
-const RACK_LEFT_X = Math.round(
-  getStudioZones(SCENARIO_AUTHORING_VW, SCENARIO_AUTHORING_VH).rackLeft
-);
+const RACK_LEFT_X = Math.round(getWorkspaceZones().rackLeft);
 
 function withRackLeftX(nodes: EquipmentNode[]): EquipmentNode[] {
   return nodes.map((n) => {

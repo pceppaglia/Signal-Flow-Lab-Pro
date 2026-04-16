@@ -9,6 +9,7 @@ export type MixerRoute = 'master' | 'sub12' | 'sub34' | 'sub56' | 'sub78';
 export interface MixerChannelDSP {
   index: number;
   inputGain: GainNode;
+  micLineGain: GainNode;
   trimGain: GainNode;
   padGain: GainNode;
   polarityGain: GainNode;
@@ -156,6 +157,8 @@ export class FoundationalMixerRuntime {
     const ctx = this.ctx;
     const inputGain = ctx.createGain();
     inputGain.gain.value = 1;
+    const micLineGain = ctx.createGain();
+    micLineGain.gain.value = 100;
     const trimGain = ctx.createGain();
     trimGain.gain.value = 1;
     const padGain = ctx.createGain();
@@ -237,7 +240,8 @@ export class FoundationalMixerRuntime {
     meterAnalyser.fftSize = 512;
     meterAnalyser.smoothingTimeConstant = 0.65;
 
-    inputGain.connect(trimGain);
+    inputGain.connect(micLineGain);
+    micLineGain.connect(trimGain);
     trimGain.connect(padGain);
     padGain.connect(polarityGain);
     polarityGain.connect(hpf);
@@ -287,6 +291,7 @@ export class FoundationalMixerRuntime {
     return {
       index: i,
       inputGain,
+      micLineGain,
       trimGain,
       padGain,
       polarityGain,
@@ -413,9 +418,9 @@ export class FoundationalMixerRuntime {
         break;
       case 'micLine':
         if (value === 'mic') {
-          set(ch.trimGain.gain, Math.max(ch.trimGain.gain.value, 1));
+          set(ch.micLineGain.gain, 100);
         } else {
-          set(ch.trimGain.gain, 0.72);
+          set(ch.micLineGain.gain, 1);
         }
         break;
       case 'pad':

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback, useState, forwardRef, useImperativeHandle } from 'react';
 import type { EquipmentNode, Cable } from '../../../shared/equipment-types';
 import { getEquipmentById } from '@/lib/equipment-library';
+import { RACK_WIDTH_PX } from '@/lib/studio-layout';
 import { renderEquipmentGraphics } from '@/lib/canvas-equipment-graphics';
 
 interface Props {
@@ -42,7 +43,7 @@ const Canvas2DEquipmentRenderer = forwardRef<HTMLCanvasElement, Props>((props, r
   const drawRackRails = useCallback((ctx: CanvasRenderingContext2D) => {
     const dpr = window.devicePixelRatio || 1;
     const rackX = (100 * zoom + viewX) * dpr;
-    const rackW = 600 * zoom * dpr;
+    const rackW = RACK_WIDTH_PX * zoom * dpr;
     
     // Dark Rack Interior
     ctx.fillStyle = '#050505';

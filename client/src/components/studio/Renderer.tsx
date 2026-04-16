@@ -11,7 +11,11 @@ import {
 import type { SignalLevel } from '../../lib/equipment-library';
 import { equipmentLibrary, signalColors } from '../../lib/equipment-library';
 import { audioEngine } from '../../lib/audio-engine-v2';
-import { getStudioZones, isRackGearInVerticalBay } from '@/lib/studio-layout';
+import {
+  getStudioZones,
+  isRackGearInVerticalBay,
+  STAGE_RACK_GAP_PX,
+} from '@/lib/studio-layout';
 
 interface RendererProps {
   state: StudioState;
@@ -54,6 +58,13 @@ interface RendererProps {
   zoom: number;
   /** World-space viewport (CSS pixels / zoom) for rack snapping in Lab. */
   onViewportWorldSize?: (vw: number, vh: number) => void;
+  /** Fixed studio world size (same units as node x/y). */
+  workspaceWorldW: number;
+  workspaceWorldH: number;
+  /** Top-left of visible region in world space. */
+  canvasPanX: number;
+  canvasPanY: number;
+  onCanvasPanChange?: (x: number, y: number) => void;
 }
 
 const KNOB_DRAG_SENS = 0.35;
@@ -111,9 +122,16 @@ function nodeInView(
   w: number,
   h: number,
   vw: number,
-  vh: number
+  vh: number,
+  panX = 0,
+  panY = 0
 ): boolean {
-  return x + w >= -40 && y + h >= -40 && x <= vw + 40 && y <= vh + 40;
+  return (
+    x + w >= panX - 40 &&
+    y + h >= panY - 40 &&
+    x <= panX + vw + 40 &&
+    y <= panY + vh + 40
+  );
 }
 
 type PaintCableOpts = { improperHint?: boolean; nowMs?: number; signalActive?: boolean };
@@ -568,6 +586,11 @@ const Renderer: React.FC<RendererProps> = ({
   deskNode,
   zoom,
   onViewportWorldSize,
+  workspaceWorldW,
+  workspaceWorldH,
+  canvasPanX,
+  canvasPanY,
+  onCanvasPanChange,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const logicalSizeRef = useRef({ w: 0, h: 0 });
@@ -601,6 +624,12 @@ const Renderer: React.FC<RendererProps> = ({
   const hoverPortRef = useRef<{ pick: PortPick; x: number; y: number } | null>(null);
   const hoverPortUntilRef = useRef(0);
   const hoverCableIdRef = useRef<string | null>(null);
+  const panDragRef = useRef<{
+    startClientX: number;
+    startClientY: number;
+    startPanX: number;
+    startPanY: number;
+  } | null>(null);
 
   const stateRef = useRef(state);
   const zoomRef = useRef(zoom);
@@ -617,7 +646,10 @@ const Renderer: React.FC<RendererProps> = ({
   const onPortMouseUpRef = useRef(onPortMouseUp);
   const deskNodeRef = useRef(deskNode);
   const onViewportWorldSizeRef = useRef(onViewportWorldSize);
+  const onCanvasPanChangeRef = useRef(onCanvasPanChange);
   const lastReportedVpRef = useRef({ w: 0, h: 0 });
+  const workspaceWorldRef = useRef({ w: workspaceWorldW, h: workspaceWorldH });
+  const canvasPanRef = useRef({ x: canvasPanX, y: canvasPanY });
 
   stateRef.current = state;
   zoomRef.current = zoom;
@@ -634,15 +666,19 @@ const Renderer: React.FC<RendererProps> = ({
   onPortMouseUpRef.current = onPortMouseUp;
   deskNodeRef.current = deskNode;
   onViewportWorldSizeRef.current = onViewportWorldSize;
+  onCanvasPanChangeRef.current = onCanvasPanChange;
+  workspaceWorldRef.current = { w: workspaceWorldW, h: workspaceWorldH };
+  canvasPanRef.current = { x: canvasPanX, y: canvasPanY };
 
   const getWorldPoint = useCallback((clientX: number, clientY: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
     const z = zoomRef.current;
+    const pan = canvasPanRef.current;
     return {
-      x: (clientX - rect.left) / z,
-      y: (clientY - rect.top) / z,
+      x: (clientX - rect.left) / z + pan.x,
+      y: (clientY - rect.top) / z + pan.y,
     };
   }, []);
 
@@ -705,21 +741,27 @@ const Renderer: React.FC<RendererProps> = ({
         onViewportWorldSizeRef.current?.(vw, vh);
       }
 
-      const zones = getStudioZones(vw, vh);
+      const pan = canvasPanRef.current;
+      const world = workspaceWorldRef.current;
+      const zones = getStudioZones(world.w, world.h);
+
+      ctx.save();
+      ctx.translate(-pan.x, -pan.y);
+
       ctx.fillStyle = blueprintModeRef.current ? '#0a1628' : '#0d0d0d';
-      ctx.fillRect(0, 0, vw, vh);
+      ctx.fillRect(0, 0, world.w, world.h);
 
       ctx.strokeStyle = blueprintModeRef.current
         ? 'rgba(186,221,255,0.11)'
         : 'rgba(255,255,255,0.04)';
       ctx.lineWidth = 1 / z;
-      for (let gx = 0; gx < vw; gx += 50) {
+      for (let gx = 0; gx < world.w; gx += 50) {
         ctx.beginPath();
         ctx.moveTo(gx, 0);
-        ctx.lineTo(gx, vh);
+        ctx.lineTo(gx, world.h);
         ctx.stroke();
       }
-      for (let gy = 0; gy < vh; gy += 44) {
+      for (let gy = 0; gy < world.h; gy += 44) {
         ctx.strokeStyle =
           gy % (44 * 4) === 0
             ? (blueprintModeRef.current
@@ -730,19 +772,30 @@ const Renderer: React.FC<RendererProps> = ({
                 : 'rgba(255,255,255,0.025)');
         ctx.beginPath();
         ctx.moveTo(0, gy);
-        ctx.lineTo(vw, gy);
+        ctx.lineTo(world.w, gy);
         ctx.stroke();
       }
 
-      drawRackRails(ctx, zones, vh, z);
+      ctx.save();
+      const gap = STAGE_RACK_GAP_PX;
+      const sepX0 = Math.max(0, zones.rackLeft - gap);
+      const sep = ctx.createLinearGradient(sepX0, 0, zones.rackLeft + 1, 0);
+      sep.addColorStop(0, 'rgba(0,0,0,0)');
+      sep.addColorStop(0.55, 'rgba(0,0,0,0.25)');
+      sep.addColorStop(1, 'rgba(0,0,0,0.45)');
+      ctx.fillStyle = sep;
+      ctx.fillRect(sepX0, 0, Math.min(gap, zones.rackLeft - sepX0), world.h);
+      ctx.restore();
+
+      drawRackRails(ctx, zones, world.h, z);
 
       if (blueprintModeRef.current) {
         ctx.save();
         ctx.fillStyle = 'rgba(20,40,72,0.32)';
-        ctx.fillRect(0, 0, zones.rackLeft, vh);
-        ctx.fillRect(zones.rackRight, 0, vw - zones.rackRight, vh);
+        ctx.fillRect(0, 0, zones.rackLeft, world.h);
+        ctx.fillRect(zones.rackRight, 0, world.w - zones.rackRight, world.h);
         ctx.fillStyle = 'rgba(20,40,72,0.2)';
-        ctx.fillRect(zones.rackLeft, 0, zones.rackRight - zones.rackLeft, vh);
+        ctx.fillRect(zones.rackLeft, 0, zones.rackRight - zones.rackLeft, world.h);
         ctx.restore();
       }
 
@@ -754,9 +807,9 @@ const Renderer: React.FC<RendererProps> = ({
       ctx.setLineDash([6 / z, 5 / z]);
       ctx.beginPath();
       ctx.moveTo(zones.rackLeft, 0);
-      ctx.lineTo(zones.rackLeft, vh);
+      ctx.lineTo(zones.rackLeft, world.h);
       ctx.moveTo(zones.rackRight, 0);
-      ctx.lineTo(zones.rackRight, vh);
+      ctx.lineTo(zones.rackRight, world.h);
       ctx.stroke();
       ctx.setLineDash([]);
       ctx.fillStyle = blueprintModeRef.current
@@ -765,15 +818,6 @@ const Renderer: React.FC<RendererProps> = ({
       ctx.font = `${Math.max(10, 11) / z}px system-ui, sans-serif`;
       ctx.textAlign = 'left';
       ctx.fillText('STAGE', 12 / z, 22 / z);
-      ctx.textAlign = 'center';
-      ctx.fillStyle = blueprintModeRef.current
-        ? 'rgba(186,221,255,0.24)'
-        : 'rgba(232,160,32,0.6)';
-      ctx.fillText(
-        'VERTICAL RACK · 600px',
-        (zones.rackLeft + zones.rackRight) * 0.5,
-        22 / z
-      );
       ctx.textAlign = 'left';
       ctx.restore();
 
@@ -782,7 +826,7 @@ const Renderer: React.FC<RendererProps> = ({
         const d = equipmentLibrary.find((ed) => ed.id === n.defId);
         if (!d) return;
         const h = d.heightUnits > 0 ? d.heightUnits * 44 : 100;
-        if (nodeInView(n.x, n.y, d.width, h, vw, vh)) {
+        if (nodeInView(n.x, n.y, d.width, h, vw, vh, pan.x, pan.y)) {
           inViewNodeIds.add(n.id);
         }
       });
@@ -808,7 +852,7 @@ const Renderer: React.FC<RendererProps> = ({
         const def = equipmentLibrary.find((d) => d.id === node.defId);
         if (!def) return;
         const nodeH = def.heightUnits > 0 ? def.heightUnits * 44 : 100;
-        const inView = nodeInView(node.x, node.y, def.width, nodeH, vw, vh);
+        const inView = nodeInView(node.x, node.y, def.width, nodeH, vw, vh, pan.x, pan.y);
         const nodeLevel = inView ? audioEngine.getMeterLevel(node.id) : 0;
 
         renderEquipmentGraphics({
@@ -882,18 +926,18 @@ const Renderer: React.FC<RendererProps> = ({
           def.heightUnits > 0 &&
           isRackGearInVerticalBay(node.x, def.width, zones)
         ) {
+          const powerOn = node.state?.power !== false;
           let ledColor = '#68ff7a';
           if (def.brand.toLowerCase().includes('ssl')) ledColor = '#ff4242';
           if (def.brand.toLowerCase().includes('neve')) ledColor = '#ffbe3b';
           if (def.id === 'sig-gen-pro') ledColor = '#68ff7a';
+          const engineRun = audioEngine.audioContext?.state === 'running';
+          const ledActive = engineRun && powerOn;
           ctx.save();
           ctx.beginPath();
-          ctx.fillStyle =
-            audioEngine.audioContext?.state === 'running'
-              ? ledColor
-              : 'rgba(60,60,60,0.7)';
-          ctx.shadowColor = ledColor;
-          ctx.shadowBlur = audioEngine.audioContext?.state === 'running' ? 8 : 0;
+          ctx.fillStyle = ledActive ? ledColor : 'rgba(45,45,48,0.95)';
+          ctx.shadowColor = ledActive ? ledColor : 'transparent';
+          ctx.shadowBlur = ledActive ? 8 : 0;
           ctx.arc(node.x + 8 / z, node.y + 8 / z, 2.4 / z, 0, Math.PI * 2);
           ctx.fill();
           ctx.restore();
@@ -1047,6 +1091,7 @@ const Renderer: React.FC<RendererProps> = ({
       }
 
       ctx.restore();
+      ctx.restore();
       frameId = requestAnimationFrame(render);
     };
 
@@ -1123,8 +1168,22 @@ const Renderer: React.FC<RendererProps> = ({
       }
 
       const d = dragRef.current;
-      if (!d) return;
-      onUpdateNodeRef.current(d.id, x - d.grabX, y - d.grabY);
+      if (d) {
+        onUpdateNodeRef.current(d.id, x - d.grabX, y - d.grabY);
+        return;
+      }
+      const pd = panDragRef.current;
+      if (!pd || !onCanvasPanChangeRef.current) return;
+      if (canvasRef.current) canvasRef.current.style.cursor = 'grabbing';
+      const z = zoomRef.current;
+      const vw = logicalSizeRef.current.w / z;
+      const vh = logicalSizeRef.current.h / z;
+      const world = workspaceWorldRef.current;
+      const dx = (e.clientX - pd.startClientX) / z;
+      const dy = (e.clientY - pd.startClientY) / z;
+      const nx = Math.min(Math.max(0, pd.startPanX - dx), Math.max(0, world.w - vw));
+      const ny = Math.min(Math.max(0, pd.startPanY - dy), Math.max(0, world.h - vh));
+      onCanvasPanChangeRef.current(nx, ny);
     };
 
     const onUp = (e: PointerEvent) => {
@@ -1189,6 +1248,8 @@ const Renderer: React.FC<RendererProps> = ({
       dragRef.current = null;
       knobDragRef.current = null;
       faderDragRef.current = null;
+      panDragRef.current = null;
+      if (canvasRef.current) canvasRef.current.style.cursor = 'crosshair';
     };
 
     window.addEventListener('pointermove', onMove);
@@ -1363,6 +1424,13 @@ const Renderer: React.FC<RendererProps> = ({
       };
     } else {
       dragRef.current = null;
+      const pan = canvasPanRef.current;
+      panDragRef.current = {
+        startClientX: e.clientX,
+        startClientY: e.clientY,
+        startPanX: pan.x,
+        startPanY: pan.y,
+      };
     }
   };
 
