@@ -177,7 +177,7 @@ const Lab: React.FC = () => {
       const z0 = zoomRef.current;
       const { w: vw, h: vh } = viewportMetricsRef.current;
       const factor = Math.exp(-e.deltaY * 0.0018);
-      const z1 = Math.min(2, Math.max(0.5, z0 * factor));
+      const z1 = Math.min(2.0, Math.max(0.5, z0 * factor));
       if (Math.abs(z1 - z0) < 1e-4) return;
       setCanvasPan((p0) => {
         const wx = p0.x + mx / z0;
@@ -380,7 +380,8 @@ const Lab: React.FC = () => {
           def.width,
           def.heightUnits,
           WORKSPACE_WORLD_W,
-          WORKSPACE_WORLD_H
+          WORKSPACE_WORLD_H,
+          rackPosition.y
         );
         const rackTop = rackPosition.y;
         const rackBottom = rackTop + RACK_HEIGHT_PX;
@@ -407,11 +408,19 @@ const Lab: React.FC = () => {
 
   const handleCanvasControl = useCallback(
     (nodeId: string, controlId: string, value: number | boolean | string) => {
+      let nevePhantomPower: boolean | null = null;
       setState((prev) => {
         const node = prev.nodes.find((nn) => nn.id === nodeId);
         const def = node
           ? equipmentLibrary.find((d) => d.id === node.defId)
           : undefined;
+        if (
+          def?.id === 'neve-1073' &&
+          controlId === 'phantom' &&
+          typeof value === 'boolean'
+        ) {
+          nevePhantomPower = value;
+        }
         if (def && typeof value === 'number') {
           const ctrl = def.controls.find((c) => c.id === controlId);
           if (controlId.endsWith('-fader')) {
@@ -475,14 +484,24 @@ const Lab: React.FC = () => {
         }
         return {
           ...prev,
-          nodes: prev.nodes.map((n) =>
-            n.id === nodeId
-              ? { ...n, state: { ...n.state, [controlId]: value } }
-              : n
-          ),
+          nodes: prev.nodes.map((n) => {
+            if (n.id !== nodeId) return n;
+            const next = { ...n.state, [controlId]: value };
+            if (
+              def?.id === 'neve-1073' &&
+              controlId === 'phantom' &&
+              typeof value === 'boolean'
+            ) {
+              next.phantomPower = value;
+            }
+            return { ...n, state: next };
+          }),
         };
       });
       audioEngine.updateNodeState(nodeId, controlId, value);
+      if (nevePhantomPower !== null) {
+        audioEngine.updateNodeState(nodeId, 'phantomPower', nevePhantomPower);
+      }
     },
     []
   );
@@ -858,7 +877,6 @@ const Lab: React.FC = () => {
     blueprintMode,
   ]);
 
-  const worldZones = useMemo(() => getWorkspaceZones(), []);
   const pickerButtonStyles = useMemo(() => {
     const rackOuterLeft = rackPosition.x;
     const stageWorldX = Math.max(80, rackOuterLeft * 0.45);
@@ -1032,7 +1050,7 @@ const Lab: React.FC = () => {
                 const mx = canvasEl ? canvasEl.clientWidth / 2 : vw * 0.5;
                 const my = canvasEl ? canvasEl.clientHeight / 2 : vh * 0.5;
                 setZoom((z0) => {
-                  const z1 = Math.min(2, z0 + 0.1);
+                  const z1 = Math.min(2.0, z0 + 0.1);
                   if (Math.abs(z1 - z0) < 1e-6) return z0;
                   setCanvasPan((p0) => {
                     const wx = p0.x + mx / z0;

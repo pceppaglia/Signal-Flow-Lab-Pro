@@ -87,11 +87,13 @@ export const WorkspaceMinimap: React.FC<WorkspaceMinimapProps> = ({
     if (!d) return;
     const { wx, wy } = clientToWorld(e.clientX, e.clientY);
     if (d.kind === 'view') {
-      onPanChange(clamp(wx - d.offX, wy - d.offY));
+      const c = clamp(wx - d.offX, wy - d.offY);
+      onPanChange(c.x, c.y);
     } else {
       const dx = d.startWx - wx;
       const dy = d.startWy - wy;
-      onPanChange(clamp(d.startPanX + dx, d.startPanY + dy));
+      const c = clamp(d.startPanX + dx, d.startPanY + dy);
+      onPanChange(c.x, c.y);
     }
   };
 

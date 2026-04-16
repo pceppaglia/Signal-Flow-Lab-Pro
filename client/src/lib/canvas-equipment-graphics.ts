@@ -35,7 +35,8 @@ export function snapRackNodePosition(
   width: number,
   heightUnits: number,
   worldWidth: number,
-  worldHeight?: number
+  worldHeight?: number,
+  rackTopY?: number
 ): { x: number; y: number } {
   return snapRackNodePositionFromLayout(
     x,
@@ -43,7 +44,8 @@ export function snapRackNodePosition(
     width,
     heightUnits,
     worldWidth,
-    worldHeight
+    worldHeight,
+    rackTopY
   );
 }
 
@@ -863,7 +865,7 @@ function renderNeve1073(gc: GraphicsContext): void {
   ctx.fillText('LO', ix + iw * (lo.relX ?? 0.6), y + h - 4);
 
   const ph = boolState(node, 'phantom', false);
-  const phx = ix + iw * (controlDef(lib, 'phantom')!.relX ?? 0.88);
+  const phx = ix + iw * (controlDef(lib, 'phantom')!.relX ?? 0.78);
   const phy = y + h * (controlDef(lib, 'phantom')!.relY ?? 0.5);
   const pw = compact ? 22 : 28;
   const phh = compact ? 10 : 16;
@@ -1302,9 +1304,11 @@ function renderConsoleStrip(
   const { ctx, x, y, w, h } = gc;
   drawBrushedFace(ctx, x, y, w, h, face, { rackEars: true });
   const { ix, iw } = rackInnerMetrics(x, w);
-  ctx.fillStyle = accent;
-  ctx.font = 'bold 11px sans-serif';
-  ctx.fillText(label, ix + 8, y + 18);
+  if (label) {
+    ctx.fillStyle = accent;
+    ctx.font = 'bold 11px sans-serif';
+    ctx.fillText(label, ix + 8, y + 18);
+  }
   const chW = Math.min(48, (iw - 16) / Math.min(channels, 16));
   for (let i = 0; i < Math.min(channels, 16); i++) {
     const cx = ix + 8 + i * chW;
@@ -1495,7 +1499,7 @@ export function hitTestInteractiveControl(
         };
       }
       const ph = controlDef(d, 'phantom')!;
-      const phx = ix + iw * (ph.relX ?? 0.88);
+      const phx = ix + iw * (ph.relX ?? 0.78);
       const phy = y + h * (ph.relY ?? 0.5);
       const pw = compact ? 22 : 28;
       const phh = compact ? 10 : 16;
@@ -1790,7 +1794,7 @@ export function renderEquipmentGraphics(gc: GraphicsContext): void {
       renderConsoleStrip(gc, '#222', '#E8A020', 'Vortex VX-1604', 16);
       break;
     case 'professional-mixer-console':
-      renderConsoleStrip(gc, '#1f1f1f', '#9cd3ff', 'Professional Mixer Console', 12);
+      renderConsoleStrip(gc, '#1f1f1f', '#9cd3ff', '', 12);
       break;
     default:
       renderDefault(gc);

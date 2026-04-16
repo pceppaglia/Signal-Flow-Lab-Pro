@@ -88,35 +88,37 @@ export function isRackGearInVerticalBay(
   return cx >= zones.rackInnerLeft - 2 && cx <= zones.rackInnerRight + 2;
 }
 
-/** Snap rack-mount gear to 1U vertical grid and the left edge of the rack bay. */
+/** Snap rack-mount gear to 1U vertical grid inside a draggable rack instance. */
 export function snapRackNodePosition(
   x: number,
   y: number,
   _width: number,
   heightUnits: number,
   vw: number,
-  vh?: number
+  vh?: number,
+  /** Top Y of the 12U rack in world space; when set, Y snaps to this rack’s U grid and stays within its height. */
+  rackTopY?: number
 ): { x: number; y: number } {
   if (heightUnits <= 0) return { x, y };
-  void vw; // rack snapping no longer depends on fixed centered bay.
+  void vw;
 
-  // Requirement: preserve horizontal position, but enforce 1U vertical snapping.
-  // Logic requirement: for heightUnits > 0, y must always be a multiple of
-  // `44 + RACK_GRID_TOP_PX` (with 44px = RACK_U_PX).
+  if (rackTopY != null && Number.isFinite(rackTopY)) {
+    const origin = rackTopY;
+    const fy = Math.round((y - origin) / RACK_U_PX) * RACK_U_PX + origin;
+    const maxTop = origin + RACK_HEIGHT_PX - heightUnits * RACK_U_PX;
+    const cy = Math.min(Math.max(fy, origin), Math.max(origin, maxTop));
+    return { x, y: cy };
+  }
+
   const fy = Math.round((y - RACK_GRID_TOP_PX) / RACK_U_PX) * RACK_U_PX + RACK_GRID_TOP_PX;
   const worldH = vh ?? 800;
   const rackH = Math.max(RACK_U_PX, heightUnits * RACK_U_PX);
   const maxYBound = Math.max(0, worldH - rackH);
-
-  // Clamp *while staying on-grid* so y remains a multiple of 44px increments.
   const minSlot = Math.ceil((0 - RACK_GRID_TOP_PX) / RACK_U_PX) * RACK_U_PX + RACK_GRID_TOP_PX;
   const maxSlot =
     Math.floor((maxYBound - RACK_GRID_TOP_PX) / RACK_U_PX) * RACK_U_PX + RACK_GRID_TOP_PX;
   const cy = Math.min(Math.max(fy, minSlot), maxSlot);
-  return {
-    x,
-    y: cy,
-  };
+  return { x, y: cy };
 }
 
 export function defaultRackColumnX(zones: StudioZones, _width: number): number {

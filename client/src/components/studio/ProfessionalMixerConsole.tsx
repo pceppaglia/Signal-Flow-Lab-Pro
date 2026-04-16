@@ -317,7 +317,6 @@ function BusCompNeedle({ drive }: { drive: number }) {
 
 const ProfessionalMixerConsole: React.FC<{ className?: string }> = ({ className }) => {
   const [channelCount, setChannelCount] = useState(4);
-  const [scale, setScale] = useState(1);
   const [meterFrame, setMeterFrame] = useState(0);
   const [sectionCollapsed, setSectionCollapsed] = useState<Record<CollapsibleSection, boolean>>({
     input: false,
@@ -460,50 +459,30 @@ const ProfessionalMixerConsole: React.FC<{ className?: string }> = ({ className 
   return (
     <div
       className={cn(
-        'flex min-h-0 shrink-0 flex-col border-t border-amber-900/30 bg-gradient-to-b from-[#252a32] via-[#1c2026] to-[#14181c] shadow-[0_-8px_32px_rgba(0,0,0,0.45)]',
+        'relative flex min-h-0 shrink-0 flex-col border-t border-amber-900/30 bg-gradient-to-b from-[#252a32] via-[#1c2026] to-[#14181c] shadow-[0_-8px_32px_rgba(0,0,0,0.45)]',
         className
       )}
       style={{ fontFamily: 'system-ui, sans-serif' }}
     >
-      <div className="flex shrink-0 items-center justify-end gap-3 border-b border-white/10 px-3 py-1">
-        <button
-          type="button"
-          disabled={channelCount >= 24}
-          onClick={() => setChannelCount((c) => Math.min(24, c + 1))}
-          className={cn(
-            'rounded-full border px-2.5 py-0.5 text-[10px] font-bold',
-            channelCount >= 24
-              ? 'cursor-not-allowed border-zinc-700/40 bg-zinc-900/40 text-zinc-600'
-              : 'border-emerald-400/45 bg-emerald-600/20 text-emerald-200 hover:bg-emerald-600/30'
-          )}
-        >
-          + CH
-        </button>
-        <label className="flex items-center gap-1.5 text-[9px] text-zinc-400">
-          Scale
-          <input
-            type="range"
-            min={0.72}
-            max={1.15}
-            step={0.01}
-            value={scale}
-            onChange={(e) => setScale(Number(e.target.value))}
-            className="h-1 w-20 accent-amber-500"
-          />
-        </label>
-      </div>
+      <button
+        type="button"
+        disabled={channelCount >= 24}
+        onClick={() => setChannelCount((c) => Math.min(24, c + 1))}
+        className={cn(
+          'absolute right-3 top-2 z-20 rounded-full border px-2.5 py-0.5 text-[9px] font-bold shadow-md backdrop-blur-sm',
+          channelCount >= 24
+            ? 'cursor-not-allowed border-zinc-700/40 bg-zinc-900/50 text-zinc-600'
+            : 'border-emerald-400/45 bg-emerald-600/25 text-emerald-100 hover:bg-emerald-600/35'
+        )}
+      >
+        + CH
+      </button>
 
       <div
         className="flex min-h-0 flex-1 overflow-x-auto overflow-y-hidden"
         style={{ scrollbarGutter: 'stable' }}
       >
-        <div
-          className="flex min-w-max items-stretch gap-1 px-2 py-2"
-          style={{
-            transform: `scale(${scale})`,
-            transformOrigin: 'bottom left',
-          }}
-        >
+        <div className="flex min-w-max items-stretch gap-1 px-2 py-2 pt-9">
           {chIndices.map((idx) => {
             const ch = channels[idx - 1]!;
             const level =
@@ -937,11 +916,11 @@ const ProfessionalMixerConsole: React.FC<{ className?: string }> = ({ className 
             );
           })}
 
-          <div className="sticky right-0 flex h-full max-h-[min(640px,100%)] w-[214px] shrink-0 flex-col rounded-lg border border-amber-700/30 bg-gradient-to-b from-[#2c323a] to-[#181c22] p-2 shadow-lg">
+          <div className="sticky right-0 flex h-full min-h-0 max-h-full w-[214px] shrink-0 flex-col rounded-lg border border-amber-700/30 bg-gradient-to-b from-[#2c323a] to-[#181c22] p-2 shadow-lg">
             <div className="shrink-0 text-[9px] font-bold uppercase tracking-widest text-amber-200/80">
               Master
             </div>
-            <div className="mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden border-t border-white/10 pt-2 pr-0.5">
+            <div className="mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden border-t border-white/10 pt-2 pr-0.5 [scrollbar-gutter:stable]">
               <div className="text-[8px] font-bold text-zinc-500">Subgroups</div>
               {(['1–2', '3–4', '5–6', '7–8'] as const).map((label, s) => (
                 <div

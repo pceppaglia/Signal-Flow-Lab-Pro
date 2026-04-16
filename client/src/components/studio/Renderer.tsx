@@ -365,26 +365,6 @@ function findConsoleControlHit(
   return null;
 }
 
-function findNevePhantomHit(
-  wx: number,
-  wy: number,
-  node: StudioState['nodes'][number],
-  z: number
-): boolean {
-  const btn = {
-    x: node.x + 540 / z,
-    y: node.y + 10 / z,
-    w: 36 / z,
-    h: 18 / z,
-  };
-  return (
-    wx >= btn.x &&
-    wx <= btn.x + btn.w &&
-    wy >= btn.y &&
-    wy <= btn.y + btn.h
-  );
-}
-
 function connectionVisualKind(conn: Connection): 'mic' | 'line' | 'speaker' | 'digital' {
   const t = conn.cableColor;
   if (t === 'mic' || t === 'line' || t === 'speaker' || t === 'digital') return t;
@@ -763,25 +743,18 @@ const Renderer: React.FC<RendererProps> = ({
       ctx.fillStyle = blueprintModeRef.current ? '#0a1628' : '#0d0d0d';
       ctx.fillRect(0, 0, world.w, world.h);
 
-      ctx.strokeStyle = blueprintModeRef.current
-        ? 'rgba(186,221,255,0.11)'
-        : 'rgba(255,255,255,0.04)';
+      const gridStep = 50;
       ctx.lineWidth = 1 / z;
-      for (let gx = 0; gx < world.w; gx += 50) {
+      ctx.strokeStyle = blueprintModeRef.current
+        ? 'rgba(186,221,255,0.1)'
+        : 'rgba(255,255,255,0.042)';
+      for (let gx = 0; gx <= world.w; gx += gridStep) {
         ctx.beginPath();
         ctx.moveTo(gx, 0);
         ctx.lineTo(gx, world.h);
         ctx.stroke();
       }
-      for (let gy = 0; gy < world.h; gy += 44) {
-        ctx.strokeStyle =
-          gy % (44 * 4) === 0
-            ? (blueprintModeRef.current
-                ? 'rgba(185,220,255,0.16)'
-                : 'rgba(255,255,255,0.08)')
-            : (blueprintModeRef.current
-                ? 'rgba(185,220,255,0.06)'
-                : 'rgba(255,255,255,0.025)');
+      for (let gy = 0; gy <= world.h; gy += gridStep) {
         ctx.beginPath();
         ctx.moveTo(0, gy);
         ctx.lineTo(world.w, gy);
@@ -789,7 +762,7 @@ const Renderer: React.FC<RendererProps> = ({
       }
 
       if (blueprintModeRef.current) {
-        ctx.fillStyle = 'rgba(20,40,72,0.14)';
+        ctx.fillStyle = 'rgba(20,40,72,0.12)';
         ctx.fillRect(0, 0, world.w, world.h);
       }
 
@@ -798,6 +771,7 @@ const Renderer: React.FC<RendererProps> = ({
         y: RACK_GRID_TOP_PX,
       };
       const rackOuterLeft = rackPos.x;
+      const rackOuterRight = rackOuterLeft + RACK_OUTER_W;
       const rackTop = rackPos.y;
 
       drawHardwareRackFrame(ctx, rackOuterLeft, rackTop, RACK_OUTER_W, RACK_HEIGHT_PX, z);
@@ -926,24 +900,6 @@ const Renderer: React.FC<RendererProps> = ({
             ctx.fill();
             ctx.restore();
           }
-        }
-        if (def.id === 'neve-1073') {
-          const phantomOn =
-            node.state.phantomPower === true || node.state.phantom === true;
-          const px = node.x + 540 / z;
-          const py = node.y + 10 / z;
-          ctx.save();
-          ctx.fillStyle = phantomOn ? '#f8d24a' : '#3a3222';
-          ctx.strokeStyle = '#9e8650';
-          ctx.lineWidth = 1 / z;
-          ctx.shadowColor = phantomOn ? '#f8d24a' : 'transparent';
-          ctx.shadowBlur = phantomOn ? 8 : 0;
-          ctx.fillRect(px, py, 36 / z, 18 / z);
-          ctx.strokeRect(px, py, 36 / z, 18 / z);
-          ctx.fillStyle = '#111';
-          ctx.font = `${8 / z}px sans-serif`;
-          ctx.fillText('+48V', px + 6 / z, py + 12 / z);
-          ctx.restore();
         }
       });
 
@@ -1386,12 +1342,6 @@ const Renderer: React.FC<RendererProps> = ({
     for (const node of [...stateRef.current.nodes].reverse()) {
       const def = equipmentLibrary.find((d) => d.id === node.defId);
       if (!def) continue;
-      if (def.id === 'neve-1073' && findNevePhantomHit(x, y, node, zoomRef.current)) {
-        onSelectNode(node.id);
-        const current = node.state.phantomPower === true || node.state.phantom === true;
-        onControlChangeRef.current?.(node.id, 'phantomPower', !current);
-        return;
-      }
       if (def.id === 'professional-mixer-console') {
         const nodeH = def.heightUnits > 0 ? def.heightUnits * 44 : 100;
         const hit = findConsoleControlHit(x, y, node, def.width, nodeH, zoomRef.current);
