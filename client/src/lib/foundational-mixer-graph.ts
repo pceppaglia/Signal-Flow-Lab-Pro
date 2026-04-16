@@ -46,12 +46,16 @@ export interface MixerChannelDSP {
 export interface SubGroupDSP {
   index: number;
   sum: GainNode;
+  eqHigh: BiquadFilterNode;
+  eqLow: BiquadFilterNode;
   faderGain: GainNode;
   panner: StereoPannerNode;
   muteGain: GainNode;
   soloGain: GainNode;
   splitter: ChannelSplitterNode;
   monoOut: GainNode;
+  /** When gain is 0, subgroup is removed from the stereo main (L/R) bus. */
+  mainStereoAssign: GainNode;
   meterAnalyser: AnalyserNode;
 }
 
@@ -65,6 +69,7 @@ export class FoundationalMixerRuntime {
   readonly monitorNear: GainNode;
   readonly monitorFar: GainNode;
   readonly monitorMerge: GainNode;
+  readonly masterMeterAnalyser: AnalyserNode;
   readonly auxReturnGains: GainNode[] = [];
   private readonly ctx: AudioContext;
   private activeChannelCount = 4;
@@ -115,6 +120,10 @@ export class FoundationalMixerRuntime {
     this.masterFader.connect(this.masterMute);
     this.masterMute.connect(this.monitorNear);
     this.masterMute.connect(this.monitorFar);
+    this.masterMeterAnalyser = ctx.createAnalyser();
+    this.masterMeterAnalyser.fftSize = 512;
+    this.masterMeterAnalyser.smoothingTimeConstant = 0.65;
+    this.masterMute.connect(this.masterMeterAnalyser);
     this.monitorNear.connect(this.monitorMerge);
     this.monitorFar.connect(this.monitorMerge);
     this.monitorMerge.connect(masterGain);
@@ -136,7 +145,7 @@ export class FoundationalMixerRuntime {
     }
 
     for (const sub of this.subGroups) {
-      sub.monoOut.connect(this.programBus);
+      sub.mainStereoAssign.connect(this.programBus);
     }
 
     this.setActiveChannelCount(4);
@@ -329,6 +338,16 @@ export class FoundationalMixerRuntime {
   private buildSubgroup(s: number): SubGroupDSP {
     const ctx = this.ctx;
     const sum = ctx.createGain();
+    const eqHigh = ctx.createBiquadFilter();
+    eqHigh.type = 'highshelf';
+    eqHigh.frequency.value = 8000;
+    eqHigh.Q.value = 0.707;
+    eqHigh.gain.value = 0;
+    const eqLow = ctx.createBiquadFilter();
+    eqLow.type = 'lowshelf';
+    eqLow.frequency.value = 120;
+    eqLow.Q.value = 0.707;
+    eqLow.gain.value = 0;
     const faderGain = ctx.createGain();
     faderGain.gain.value = 0.85;
     const panner = ctx.createStereoPanner();
@@ -339,27 +358,35 @@ export class FoundationalMixerRuntime {
     const splitter = ctx.createChannelSplitter(2);
     const monoOut = ctx.createGain();
     monoOut.gain.value = 0.5;
+    const mainStereoAssign = ctx.createGain();
+    mainStereoAssign.gain.value = 1;
     const meterAnalyser = ctx.createAnalyser();
     meterAnalyser.fftSize = 512;
 
-    sum.connect(faderGain);
+    sum.connect(eqHigh);
+    eqHigh.connect(eqLow);
+    eqLow.connect(faderGain);
     faderGain.connect(panner);
     panner.connect(muteGain);
     muteGain.connect(soloGain);
     soloGain.connect(splitter);
     splitter.connect(monoOut, 0, 0);
     splitter.connect(monoOut, 1, 0);
+    monoOut.connect(mainStereoAssign);
     faderGain.connect(meterAnalyser);
 
     return {
       index: s,
       sum,
+      eqHigh,
+      eqLow,
       faderGain,
       panner,
       muteGain,
       soloGain,
       splitter,
       monoOut,
+      mainStereoAssign,
       meterAnalyser,
     };
   }
@@ -598,6 +625,29 @@ export class FoundationalMixerRuntime {
       case 'solo':
         sub.soloGain.gain.setTargetAtTime(value === true ? 1 : 0.35, t, 0.02);
         break;
+      case 'eqHigh':
+        if (typeof value === 'number') {
+          sub.eqHigh.gain.setTargetAtTime(Math.max(-18, Math.min(18, value)), t, 0.02);
+        }
+        break;
+      case 'eqLow':
+        if (typeof value === 'number') {
+          sub.eqLow.gain.setTargetAtTime(Math.max(-18, Math.min(18, value)), t, 0.02);
+        }
+        break;
+      case 'eqHighFreq':
+        if (typeof value === 'number') {
+          sub.eqHigh.frequency.setTargetAtTime(Math.max(1500, Math.min(16000, value)), t, 0.02);
+        }
+        break;
+      case 'eqLowFreq':
+        if (typeof value === 'number') {
+          sub.eqLow.frequency.setTargetAtTime(Math.max(30, Math.min(450, value)), t, 0.02);
+        }
+        break;
+      case 'assignMain':
+        sub.mainStereoAssign.gain.setTargetAtTime(value === true ? 1 : 0, t, 0.02);
+        break;
       default:
         break;
     }
@@ -666,6 +716,17 @@ export class FoundationalMixerRuntime {
     const sub = this.subGroups[subIdx];
     if (!sub) return 0;
     const a = sub.meterAnalyser;
+    const buf = new Float32Array(a.fftSize);
+    a.getFloatTimeDomainData(buf);
+    let peak = 0;
+    for (let i = 0; i < buf.length; i += 1) {
+      peak = Math.max(peak, Math.abs(buf[i]!));
+    }
+    return Math.min(1, peak * 1.25);
+  }
+
+  getMasterMeter(): number {
+    const a = this.masterMeterAnalyser;
     const buf = new Float32Array(a.fftSize);
     a.getFloatTimeDomainData(buf);
     let peak = 0;

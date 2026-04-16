@@ -223,6 +223,10 @@ class AudioEngineV2 {
     return this.foundationalMixer?.getSubgroupMeter(subIdx0) ?? 0;
   }
 
+  getFoundationalMixerMasterMeter(): number {
+    return this.foundationalMixer?.getMasterMeter() ?? 0;
+  }
+
   /** Builds the internal master bus once; idempotent. */
   private ensureMasterChain(): void {
     if (!this.ctx || this.masterGain) return;

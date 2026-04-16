@@ -29,6 +29,7 @@ import { defaultRackEquipmentState, equipmentLibrary } from '@/lib/equipment-lib
 import { audioEngine } from '@/lib/audio-engine-v2';
 import { scenarios } from '@/lib/scenarios';
 import { isFoundationalMixerNodeId } from '@/lib/foundational-mixer-anchors';
+import { cn } from '@/lib/utils';
 
 /** Inspector / safety panels expect `settings` + `signalLevels`; shared nodes use `state` only. */
 function adaptNodeForLegacyPanels(node: EquipmentNode): EquipmentNode & {
@@ -117,6 +118,7 @@ const Lab: React.FC = () => {
     )
   );
   const [mixerHeightPx, setMixerHeightPx] = useState(300);
+  const [mixerMinimized, setMixerMinimized] = useState(false);
   const mixerResizeRef = useRef<{ startY: number; startH: number } | null>(null);
 
   useEffect(() => {
@@ -1211,20 +1213,29 @@ const Lab: React.FC = () => {
       </div>
 
       <div
-        className="flex shrink-0 flex-col border-t border-white/10 bg-[#0a0a0a]"
-        style={{ height: mixerHeightPx }}
+        className={cn(
+          'flex shrink-0 flex-col border-t border-white/10 bg-[#0a0a0a]',
+          !mixerMinimized && 'transition-[height] duration-300 ease-out'
+        )}
+        style={{ height: mixerMinimized ? 40 : mixerHeightPx }}
       >
-        <div
-          role="separator"
-          aria-orientation="horizontal"
-          aria-label="Resize mixer height"
-          onMouseDown={(e) => {
-            e.preventDefault();
-            mixerResizeRef.current = { startY: e.clientY, startH: mixerHeightPx };
-          }}
-          className="h-1.5 shrink-0 cursor-ns-resize border-b border-amber-500/40 bg-amber-950/50 hover:bg-amber-500/30"
+        {!mixerMinimized ? (
+          <div
+            role="separator"
+            aria-orientation="horizontal"
+            aria-label="Resize mixer height"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              mixerResizeRef.current = { startY: e.clientY, startH: mixerHeightPx };
+            }}
+            className="h-1.5 shrink-0 cursor-ns-resize border-b border-amber-500/40 bg-amber-950/50 hover:bg-amber-500/30"
+          />
+        ) : null}
+        <ProfessionalMixerConsole
+          minimized={mixerMinimized}
+          onMinimizedChange={setMixerMinimized}
+          className="min-h-0 flex-1 border-t-0"
         />
-        <ProfessionalMixerConsole className="min-h-0 flex-1 border-t-0" />
       </div>
 
       <input

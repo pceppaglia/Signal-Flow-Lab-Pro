@@ -10,6 +10,7 @@ import {
   getConfigFeedback, addConfigFeedback,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
+import { channelOutputDestinationSchema } from "./mixer-schemas";
 
 export const appRouter = router({
   system: systemRouter,
@@ -131,12 +132,29 @@ export const appRouter = router({
       }),
   }),
 
+  // ─── Mixer (routing types for configs / clients) ───────────
+  mixer: router({
+    /** Validates a channel output destination; returns the parsed payload. */
+    validateChannelDestination: publicProcedure
+      .input(z.object({ destination: channelOutputDestinationSchema }))
+      .query(({ input }) => input.destination),
+  }),
+
   // ─── AI Assistant ────────────────────────────────────────────
   assistant: router({
     analyze: protectedProcedure
       .input(z.object({
         nodes: z.array(z.any()),
         cables: z.array(z.any()),
+        /** Optional per-channel bus targets (master or subgroup_id 0–3). */
+        channelDestinations: z
+          .array(
+            z.object({
+              channelKey: z.string(),
+              destination: channelOutputDestinationSchema,
+            })
+          )
+          .optional(),
         question: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
@@ -153,6 +171,12 @@ export const appRouter = router({
           signalType: c.signalType,
         }));
 
+        const routingDestinations =
+          input.channelDestinations?.map((d) => ({
+            channelKey: d.channelKey,
+            destination: d.destination,
+          })) ?? [];
+
         const systemPrompt = `You are an expert audio engineer and educator. You analyze signal flow routing configurations and provide helpful, educational feedback. You know about:
 - Signal levels: mic level (-60 to -20 dBu), line level (-10 to +4 dBu), speaker level (+20 to +40 dBu)
 - Gain staging: proper gain structure to avoid clipping and maintain signal-to-noise ratio
@@ -162,9 +186,14 @@ export const appRouter = router({
 
 Analyze the routing configuration provided and give specific, actionable feedback. Be encouraging but point out issues. Use technical terminology but explain it when needed. Keep responses concise (2-3 paragraphs max).`;
 
+        const destBlock =
+          routingDestinations.length > 0
+            ? `\n\nChannel bus assignments (master | subgroup_id 0–3): ${JSON.stringify(routingDestinations, null, 2)}`
+            : "";
+
         const userMessage = input.question
-          ? `Here is my current routing setup:\n\nNodes: ${JSON.stringify(nodesSummary, null, 2)}\n\nCables: ${JSON.stringify(cablesSummary, null, 2)}\n\nMy question: ${input.question}`
-          : `Please analyze my current routing setup and provide feedback on signal flow, gain staging, and any potential issues:\n\nNodes: ${JSON.stringify(nodesSummary, null, 2)}\n\nCables: ${JSON.stringify(cablesSummary, null, 2)}`;
+          ? `Here is my current routing setup:\n\nNodes: ${JSON.stringify(nodesSummary, null, 2)}\n\nCables: ${JSON.stringify(cablesSummary, null, 2)}${destBlock}\n\nMy question: ${input.question}`
+          : `Please analyze my current routing setup and provide feedback on signal flow, gain staging, and any potential issues:\n\nNodes: ${JSON.stringify(nodesSummary, null, 2)}\n\nCables: ${JSON.stringify(cablesSummary, null, 2)}${destBlock}`;
 
         try {
           const response = await invokeLLM({

@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import type { ChannelOutputDestination } from '@shared/mixer-types';
 
 export interface ChannelState {
   id: string;
@@ -22,7 +23,10 @@ export interface ChannelState {
   faderLevel: number;
   muted: boolean;
   solo: boolean;
+  /** Legacy: null = master, 0..3 = subgroup bus index. Prefer `outputDestination`. */
   routeToSubgroup: number | null;
+  /** tRPC-aligned bus target (master or subgroup_id 0–3). */
+  outputDestination?: ChannelOutputDestination;
   directOut: boolean;
   insertEnabled: boolean;
   inputLevel: number;
