@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useCallback } from 'react';
 import { StudioState, Connection } from '../../../../shared/equipment-types';
 import {
   renderEquipmentGraphics,
-  drawRackRails,
+  drawHardwareRackFrame,
   hitTestInteractiveControl,
   hitTestAnyPort,
   getPortAnchor,
@@ -12,9 +12,10 @@ import type { SignalLevel } from '../../lib/equipment-library';
 import { equipmentLibrary, signalColors } from '../../lib/equipment-library';
 import { audioEngine } from '../../lib/audio-engine-v2';
 import {
-  getStudioZones,
-  isRackGearInVerticalBay,
-  STAGE_RACK_GAP_PX,
+  RACK_OUTER_W,
+  RACK_HEIGHT_PX,
+  RACK_WOOD_PANEL_W,
+  RACK_GRID_TOP_PX,
 } from '@/lib/studio-layout';
 
 interface RendererProps {
@@ -58,6 +59,8 @@ interface RendererProps {
   zoom: number;
   /** World-space viewport (CSS pixels / zoom) for rack snapping in Lab. */
   onViewportWorldSize?: (vw: number, vh: number) => void;
+  rackPosition?: { x: number; y: number };
+  onRackPositionChange?: (pos: { x: number; y: number }) => void;
   /** Fixed studio world size (same units as node x/y). */
   workspaceWorldW: number;
   workspaceWorldH: number;
@@ -590,12 +593,18 @@ const Renderer: React.FC<RendererProps> = ({
   workspaceWorldH,
   canvasPanX,
   canvasPanY,
+  rackPosition,
+  onRackPositionChange,
   onCanvasPanChange,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const logicalSizeRef = useRef({ w: 0, h: 0 });
   const dragRef = useRef<{
     id: string;
+    grabX: number;
+    grabY: number;
+  } | null>(null);
+  const rackDragRef = useRef<{
     grabX: number;
     grabY: number;
   } | null>(null);
@@ -645,6 +654,8 @@ const Renderer: React.FC<RendererProps> = ({
   const onPortMouseDownRef = useRef(onPortMouseDown);
   const onPortMouseUpRef = useRef(onPortMouseUp);
   const deskNodeRef = useRef(deskNode);
+  const rackPositionRef = useRef(rackPosition);
+  const onRackPositionChangeRef = useRef(onRackPositionChange);
   const onViewportWorldSizeRef = useRef(onViewportWorldSize);
   const onCanvasPanChangeRef = useRef(onCanvasPanChange);
   const lastReportedVpRef = useRef({ w: 0, h: 0 });
@@ -665,6 +676,8 @@ const Renderer: React.FC<RendererProps> = ({
   onPortMouseDownRef.current = onPortMouseDown;
   onPortMouseUpRef.current = onPortMouseUp;
   deskNodeRef.current = deskNode;
+  rackPositionRef.current = rackPosition;
+  onRackPositionChangeRef.current = onRackPositionChange;
   onViewportWorldSizeRef.current = onViewportWorldSize;
   onCanvasPanChangeRef.current = onCanvasPanChange;
   workspaceWorldRef.current = { w: workspaceWorldW, h: workspaceWorldH };
@@ -743,7 +756,6 @@ const Renderer: React.FC<RendererProps> = ({
 
       const pan = canvasPanRef.current;
       const world = workspaceWorldRef.current;
-      const zones = getStudioZones(world.w, world.h);
 
       ctx.save();
       ctx.translate(-pan.x, -pan.y);
@@ -776,50 +788,19 @@ const Renderer: React.FC<RendererProps> = ({
         ctx.stroke();
       }
 
-      ctx.save();
-      const gap = STAGE_RACK_GAP_PX;
-      const sepX0 = Math.max(0, zones.rackLeft - gap);
-      const sep = ctx.createLinearGradient(sepX0, 0, zones.rackLeft + 1, 0);
-      sep.addColorStop(0, 'rgba(0,0,0,0)');
-      sep.addColorStop(0.55, 'rgba(0,0,0,0.25)');
-      sep.addColorStop(1, 'rgba(0,0,0,0.45)');
-      ctx.fillStyle = sep;
-      ctx.fillRect(sepX0, 0, Math.min(gap, zones.rackLeft - sepX0), world.h);
-      ctx.restore();
-
-      drawRackRails(ctx, zones, world.h, z);
-
       if (blueprintModeRef.current) {
-        ctx.save();
-        ctx.fillStyle = 'rgba(20,40,72,0.32)';
-        ctx.fillRect(0, 0, zones.rackLeft, world.h);
-        ctx.fillRect(zones.rackRight, 0, world.w - zones.rackRight, world.h);
-        ctx.fillStyle = 'rgba(20,40,72,0.2)';
-        ctx.fillRect(zones.rackLeft, 0, zones.rackRight - zones.rackLeft, world.h);
-        ctx.restore();
+        ctx.fillStyle = 'rgba(20,40,72,0.14)';
+        ctx.fillRect(0, 0, world.w, world.h);
       }
 
-      ctx.save();
-      ctx.strokeStyle = blueprintModeRef.current
-        ? 'rgba(186,221,255,0.28)'
-        : 'rgba(232,160,32,0.32)';
-      ctx.lineWidth = 1.2 / z;
-      ctx.setLineDash([6 / z, 5 / z]);
-      ctx.beginPath();
-      ctx.moveTo(zones.rackLeft, 0);
-      ctx.lineTo(zones.rackLeft, world.h);
-      ctx.moveTo(zones.rackRight, 0);
-      ctx.lineTo(zones.rackRight, world.h);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.fillStyle = blueprintModeRef.current
-        ? 'rgba(186,221,255,0.2)'
-        : 'rgba(255,255,255,0.14)';
-      ctx.font = `${Math.max(10, 11) / z}px system-ui, sans-serif`;
-      ctx.textAlign = 'left';
-      ctx.fillText('STAGE', 12 / z, 22 / z);
-      ctx.textAlign = 'left';
-      ctx.restore();
+      const rackPos = rackPositionRef.current ?? {
+        x: Math.round((world.w - RACK_OUTER_W) / 2),
+        y: RACK_GRID_TOP_PX,
+      };
+      const rackOuterLeft = rackPos.x;
+      const rackTop = rackPos.y;
+
+      drawHardwareRackFrame(ctx, rackOuterLeft, rackTop, RACK_OUTER_W, RACK_HEIGHT_PX, z);
 
       const inViewNodeIds = new Set<string>();
       st.nodes.forEach((n) => {
@@ -922,25 +903,29 @@ const Renderer: React.FC<RendererProps> = ({
             ctx.restore();
           }
         }
-        if (
-          def.heightUnits > 0 &&
-          isRackGearInVerticalBay(node.x, def.width, zones)
-        ) {
-          const powerOn = node.state?.power !== false;
-          let ledColor = '#68ff7a';
-          if (def.brand.toLowerCase().includes('ssl')) ledColor = '#ff4242';
-          if (def.brand.toLowerCase().includes('neve')) ledColor = '#ffbe3b';
-          if (def.id === 'sig-gen-pro') ledColor = '#68ff7a';
-          const engineRun = audioEngine.audioContext?.state === 'running';
-          const ledActive = engineRun && powerOn;
-          ctx.save();
-          ctx.beginPath();
-          ctx.fillStyle = ledActive ? ledColor : 'rgba(45,45,48,0.95)';
-          ctx.shadowColor = ledActive ? ledColor : 'transparent';
-          ctx.shadowBlur = ledActive ? 8 : 0;
-          ctx.arc(node.x + 8 / z, node.y + 8 / z, 2.4 / z, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.restore();
+        if (def.heightUnits > 0) {
+          const innerLeft = rackOuterLeft + RACK_WOOD_PANEL_W;
+          const innerRight = rackOuterRight - RACK_WOOD_PANEL_W;
+          const cx = node.x + def.width * 0.5;
+          const inRackBay = cx >= innerLeft - 2 && cx <= innerRight + 2;
+
+          if (inRackBay) {
+            const powerOn = node.state?.power !== false;
+            let ledColor = '#68ff7a';
+            if (def.brand.toLowerCase().includes('ssl')) ledColor = '#ff4242';
+            if (def.brand.toLowerCase().includes('neve')) ledColor = '#ffbe3b';
+            if (def.id === 'sig-gen-pro') ledColor = '#68ff7a';
+            const engineRun = audioEngine.audioContext?.state === 'running';
+            const ledActive = engineRun && powerOn;
+            ctx.save();
+            ctx.beginPath();
+            ctx.fillStyle = ledActive ? ledColor : 'rgba(45,45,48,0.95)';
+            ctx.shadowColor = ledActive ? ledColor : 'transparent';
+            ctx.shadowBlur = ledActive ? 8 : 0;
+            ctx.arc(node.x + 8 / z, node.y + 8 / z, 2.4 / z, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
         }
         if (def.id === 'neve-1073') {
           const phantomOn =
@@ -1102,6 +1087,9 @@ const Renderer: React.FC<RendererProps> = ({
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
       const { x, y } = getWorldPoint(e.clientX, e.clientY);
+      if (rackDragRef.current && canvasRef.current) {
+        canvasRef.current.style.cursor = 'grabbing';
+      }
       if (cableDragRef.current) {
         cablePreviewRef.current = { x, y };
       } else {
@@ -1142,8 +1130,11 @@ const Renderer: React.FC<RendererProps> = ({
           }
         }
         if (canvasRef.current) {
-          canvasRef.current.style.cursor =
-            hoverCableIdRef.current != null ? 'pointer' : 'crosshair';
+          canvasRef.current.style.cursor = rackDragRef.current
+            ? 'grabbing'
+            : hoverCableIdRef.current != null
+              ? 'pointer'
+              : 'crosshair';
         }
       }
 
@@ -1164,6 +1155,15 @@ const Renderer: React.FC<RendererProps> = ({
         let v = kd.startValue + delta;
         v = Math.max(kd.min, Math.min(kd.max, v));
         onControlChangeRef.current(kd.nodeId, kd.controlId, v);
+        return;
+      }
+
+      const rd = rackDragRef.current;
+      if (rd && onRackPositionChangeRef.current) {
+        onRackPositionChangeRef.current({
+          x: x - rd.grabX,
+          y: y - rd.grabY,
+        });
         return;
       }
 
@@ -1246,6 +1246,7 @@ const Renderer: React.FC<RendererProps> = ({
       snappedPortRef.current = null;
 
       dragRef.current = null;
+      rackDragRef.current = null;
       knobDragRef.current = null;
       faderDragRef.current = null;
       panDragRef.current = null;
@@ -1297,6 +1298,40 @@ const Renderer: React.FC<RendererProps> = ({
           return;
         }
       }
+    }
+
+    // Wood-panel hit test: drag the entire rack hardware instance.
+    const rackPos = rackPositionRef.current ?? {
+      x: Math.round((workspaceWorldW - RACK_OUTER_W) / 2),
+      y: RACK_GRID_TOP_PX,
+    };
+    const rackOuterLeft = rackPos.x;
+    const rackOuterRight = rackOuterLeft + RACK_OUTER_W;
+    const rackTop = rackPos.y;
+    const rackBottom = rackTop + RACK_HEIGHT_PX;
+    const overLeftWood =
+      x >= rackOuterLeft &&
+      x <= rackOuterLeft + RACK_WOOD_PANEL_W &&
+      y >= rackTop &&
+      y <= rackBottom;
+    const overRightWood =
+      x >= rackOuterRight - RACK_WOOD_PANEL_W &&
+      x <= rackOuterRight &&
+      y >= rackTop &&
+      y <= rackBottom;
+    if ((overLeftWood || overRightWood) && onRackPositionChangeRef.current) {
+      rackDragRef.current = {
+        grabX: x - rackOuterLeft,
+        grabY: y - rackTop,
+      };
+      dragRef.current = null;
+      knobDragRef.current = null;
+      faderDragRef.current = null;
+      cableDragRef.current = null;
+      cablePreviewRef.current = null;
+      panDragRef.current = null;
+      if (canvasRef.current) canvasRef.current.style.cursor = 'grabbing';
+      return;
     }
 
     knobDragRef.current = null;

@@ -453,6 +453,11 @@ export class FoundationalMixerRuntime {
           ch.eqHigh.gain.setTargetAtTime(Math.max(-18, Math.min(18, value)), t, 0.02);
         }
         break;
+      case 'eqHighFreq':
+        if (typeof value === 'number') {
+          ch.eqHigh.frequency.setTargetAtTime(Math.max(1500, Math.min(16000, value)), t, 0.02);
+        }
+        break;
       case 'eqHiMid':
         if (typeof value === 'number') {
           ch.eqHiMid.gain.setTargetAtTime(Math.max(-18, Math.min(18, value)), t, 0.02);
@@ -470,12 +475,27 @@ export class FoundationalMixerRuntime {
         break;
       case 'eqHiMidFreq':
         if (typeof value === 'number') {
-          ch.eqHiMid.frequency.setTargetAtTime(Math.max(400, Math.min(8000, value)), t, 0.02);
+          ch.eqHiMid.frequency.setTargetAtTime(Math.max(600, Math.min(7000, value)), t, 0.02);
         }
         break;
       case 'eqLoMidFreq':
         if (typeof value === 'number') {
-          ch.eqLoMid.frequency.setTargetAtTime(Math.max(100, Math.min(2000, value)), t, 0.02);
+          ch.eqLoMid.frequency.setTargetAtTime(Math.max(200, Math.min(2500, value)), t, 0.02);
+        }
+        break;
+      case 'eqHiMidQ':
+        if (typeof value === 'number') {
+          ch.eqHiMid.Q.setTargetAtTime(Math.max(0.3, Math.min(6, value)), t, 0.02);
+        }
+        break;
+      case 'eqLoMidQ':
+        if (typeof value === 'number') {
+          ch.eqLoMid.Q.setTargetAtTime(Math.max(0.3, Math.min(6, value)), t, 0.02);
+        }
+        break;
+      case 'eqLowFreq':
+        if (typeof value === 'number') {
+          ch.eqLow.frequency.setTargetAtTime(Math.max(30, Math.min(450, value)), t, 0.02);
         }
         break;
       case 'aux1':

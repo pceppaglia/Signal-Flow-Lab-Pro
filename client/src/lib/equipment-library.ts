@@ -201,7 +201,7 @@ export const equipmentLibrary: EquipmentDef[] = [
       { id: 'high-shelf', label: 'HIGH', type: 'knob', default: 0, min: -15, max: 15, relX: 0.28, relY: 0.5 },
       { id: 'mid-freq', label: 'MID', type: 'knob', default: 1.6, min: 0.36, max: 7.2, relX: 0.44, relY: 0.5 },
       { id: 'low-shelf', label: 'LOW', type: 'knob', default: 0, min: -15, max: 15, color: '#333', relX: 0.6, relY: 0.5 },
-      { id: 'phantom', label: '48V', type: 'switch', default: false, relX: 0.88, relY: 0.5 },
+      { id: 'phantom', label: '48V', type: 'switch', default: false, relX: 0.78, relY: 0.5 },
     ]
   },
   {

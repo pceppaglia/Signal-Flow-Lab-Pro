@@ -11,14 +11,15 @@ import MonitorMixPanel from '../MonitorMixPanel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { snapRackNodePosition } from '@/lib/canvas-equipment-graphics';
 import {
-  getWorkspaceZones,
   WORKSPACE_WORLD_W,
   WORKSPACE_WORLD_H,
   RACK_GRID_TOP_PX,
-  RACK_GRID_BOTTOM_PX,
+  RACK_U_PX,
+  RACK_OUTER_W,
+  RACK_HEIGHT_PX,
+  RACK_WOOD_PANEL_W,
   nextStageSlot,
   nextRackSlot,
-  defaultRackColumnX,
   STAGE_RACK_GAP_PX,
 } from '@/lib/studio-layout';
 import { useSetStudioHeaderRight } from '@/contexts/StudioHeaderContext';
@@ -58,8 +59,10 @@ function mergeRackPowerDefaults(nodes: EquipmentNode[]): EquipmentNode[] {
   });
 }
 
-const MIXER_H_MIN = 180;
-const MIXER_H_MAX = 560;
+const MIXER_H_MIN = 150;
+const MIXER_H_MAX = 600;
+const SIDEBAR_W_MIN = 280;
+const SIDEBAR_W_MAX = 560;
 
 const Lab: React.FC = () => {
   const WORKSPACE_STORAGE_KEY = 'signal-flow-workspace-v3';
@@ -69,7 +72,22 @@ const Lab: React.FC = () => {
     selectedNodeId: null,
   });
   const [showRightSidebar, setShowRightSidebar] = useState(true);
+  const [rightSidebarWidth, setRightSidebarWidth] = useState(384);
+  const sidebarResizeRef = useRef<{ startX: number; startW: number } | null>(null);
   const [zoom, setZoom] = useState(1);
+  const zoomRef = useRef(zoom);
+  const [rackPosition, setRackPosition] = useState(() => ({
+    x: Math.round((WORKSPACE_WORLD_W - RACK_OUTER_W) / 2),
+    // Default grid top for 1U snapping.
+    y: RACK_GRID_TOP_PX,
+  }));
+  const rackPositionRef = useRef(rackPosition);
+  useEffect(() => {
+    rackPositionRef.current = rackPosition;
+  }, [rackPosition]);
+  useEffect(() => {
+    zoomRef.current = zoom;
+  }, [zoom]);
   const [engineRunning, setEngineRunning] = useState(false);
   const [pendingCable, setPendingCable] = useState<{
     fromNodeId: string;
@@ -126,6 +144,53 @@ const Lab: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      const d = sidebarResizeRef.current;
+      if (!d) return;
+      const dx = d.startX - e.clientX;
+      const next = Math.min(SIDEBAR_W_MAX, Math.max(SIDEBAR_W_MIN, d.startW + dx));
+      setRightSidebarWidth(next);
+    };
+    const onUp = () => {
+      sidebarResizeRef.current = null;
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, []);
+
+  const workspaceSurfaceRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = workspaceSurfaceRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      const canvasEl = canvasElementRef.current;
+      if (!canvasEl) return;
+      const cRect = canvasEl.getBoundingClientRect();
+      const mx = e.clientX - cRect.left;
+      const my = e.clientY - cRect.top;
+      if (mx < 0 || my < 0 || mx > cRect.width || my > cRect.height) return;
+      e.preventDefault();
+      const z0 = zoomRef.current;
+      const { w: vw, h: vh } = viewportMetricsRef.current;
+      const factor = Math.exp(-e.deltaY * 0.0018);
+      const z1 = Math.min(2, Math.max(0.5, z0 * factor));
+      if (Math.abs(z1 - z0) < 1e-4) return;
+      setCanvasPan((p0) => {
+        const wx = p0.x + mx / z0;
+        const wy = p0.y + my / z0;
+        return clampPanToWorld({ x: wx - mx / z1, y: wy - my / z1 }, vw, vh);
+      });
+      setZoom(z1);
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
+
+  useEffect(() => {
     try {
       const toStore = JSON.stringify({
         nodes: state.nodes,
@@ -155,14 +220,51 @@ const Lab: React.FC = () => {
     );
   }, [state.connections]);
 
-  const handleAddGear = useCallback(async (defId: string) => {
+  const normalizeRackPosition = useCallback((raw: { x: number; y: number }) => {
+    const maxX = Math.max(0, WORKSPACE_WORLD_W - RACK_OUTER_W);
+    const x = Math.min(Math.max(0, raw.x), maxX);
+
+    const maxTop = Math.max(0, WORKSPACE_WORLD_H - RACK_HEIGHT_PX);
+    const snappedY =
+      Math.round((raw.y - RACK_GRID_TOP_PX) / RACK_U_PX) * RACK_U_PX + RACK_GRID_TOP_PX;
+
+    const minSlot =
+      Math.ceil((0 - RACK_GRID_TOP_PX) / RACK_U_PX) * RACK_U_PX + RACK_GRID_TOP_PX;
+    const maxSlot =
+      Math.floor((maxTop - RACK_GRID_TOP_PX) / RACK_U_PX) * RACK_U_PX + RACK_GRID_TOP_PX;
+    const y = Math.min(Math.max(snappedY, minSlot), maxSlot);
+
+    return { x, y };
+  }, []);
+
+  const handleRackPositionChange = useCallback(
+    (nextPos: { x: number; y: number }) => {
+      const normalized = normalizeRackPosition(nextPos);
+      const prev = rackPositionRef.current;
+      const dx = normalized.x - prev.x;
+      const dy = normalized.y - prev.y;
+      if (Math.abs(dx) < 0.0001 && Math.abs(dy) < 0.0001) return;
+
+      setRackPosition(normalized);
+      setState((ws) => ({
+        ...ws,
+        nodes: ws.nodes.map((n) => {
+          const d = equipmentLibrary.find((e) => e.id === n.defId);
+          if (!d || d.heightUnits <= 0) return n;
+          return { ...n, x: n.x + dx, y: n.y + dy };
+        }),
+      }));
+    },
+    [normalizeRackPosition]
+  );
+
+  const handleAddGear = useCallback(
+    async (defId: string, opts?: { dropWorld?: { x: number; y: number } }) => {
     const def = equipmentLibrary.find((d) => d.id === defId);
     if (!def) return;
 
     await audioEngine.start();
     setEngineRunning(audioEngine.isRunning && audioEngine.audioContext?.state === 'running');
-
-    const zones = getWorkspaceZones();
 
     const defaultState: Record<string, unknown> = {
       ...(def.heightUnits > 0 ? defaultRackEquipmentState() : {}),
@@ -176,16 +278,70 @@ const Lab: React.FC = () => {
     let created = false;
 
     setState((prev) => {
-      const pos =
-        def.heightUnits > 0
-          ? nextRackSlot(prev.nodes, def, zones, equipmentLibrary)
-          : nextStageSlot(prev.nodes, def, zones, equipmentLibrary);
+      const rackOuterLeft = rackPosition.x;
+      const rackTop = rackPosition.y;
+      const rackBottom = rackTop + RACK_HEIGHT_PX;
+      const inRackOuter =
+        def.heightUnits > 0 &&
+        opts?.dropWorld &&
+        opts.dropWorld.x >= rackOuterLeft &&
+        opts.dropWorld.x <= rackOuterLeft + RACK_OUTER_W &&
+        opts.dropWorld.y >= rackTop &&
+        opts.dropWorld.y <= rackBottom;
+
+      let pos: { x: number; y: number } | null = null;
       if (def.heightUnits > 0) {
-        const rackBottom = pos.y + def.heightUnits * 44;
-        if (rackBottom > RACK_GRID_BOTTOM_PX) {
-          return prev;
+        if (inRackOuter && opts?.dropWorld) {
+          const needH = def.heightUnits * RACK_U_PX;
+          const innerLeft = rackOuterLeft + RACK_WOOD_PANEL_W;
+          const bayLeft = rackOuterLeft + RACK_WOOD_PANEL_W;
+          const bayRight = rackOuterLeft + RACK_OUTER_W - RACK_WOOD_PANEL_W;
+
+          const maxSlotTop = rackBottom - needH;
+          const maxIndex = Math.max(0, Math.floor((maxSlotTop - rackTop) / RACK_U_PX));
+          const desiredIndex = Math.round((opts.dropWorld.y - rackTop) / RACK_U_PX);
+          const clampedDesired = Math.max(0, Math.min(maxIndex, desiredIndex));
+
+          const occupied: { top: number; bottom: number }[] = [];
+          for (const n of prev.nodes) {
+            const d = equipmentLibrary.find((e) => e.id === n.defId);
+            if (!d || d.heightUnits <= 0) continue;
+            const cx = n.x + d.width * 0.5;
+            if (cx < bayLeft - 12 || cx > bayRight + 12) continue;
+            occupied.push({ top: n.y, bottom: n.y + d.heightUnits * RACK_U_PX });
+          }
+
+          const slotOverlaps = (slotTop: number) => {
+            const slotBottom = slotTop + needH;
+            return occupied.some((o) => slotTop < o.bottom && o.top < slotBottom);
+          };
+
+          let found: { x: number; y: number } | null = null;
+          for (let offset = 0; offset <= maxIndex; offset += 1) {
+            const candidates = [clampedDesired - offset, clampedDesired + offset];
+            for (const idx of candidates) {
+              if (found) break;
+              if (idx < 0 || idx > maxIndex) continue;
+              const slotTop = rackTop + idx * RACK_U_PX;
+              if (slotOverlaps(slotTop)) continue;
+              found = { x: innerLeft, y: slotTop };
+              break;
+            }
+            if (found) break;
+          }
+
+          pos = found ?? nextRackSlot(prev.nodes, def, rackPosition, equipmentLibrary);
+        } else {
+          pos = nextRackSlot(prev.nodes, def, rackPosition, equipmentLibrary);
         }
+      } else {
+        pos = nextStageSlot(prev.nodes, def, rackOuterLeft, equipmentLibrary);
       }
+
+      if (!pos) {
+        return prev;
+      }
+
       const newNode: EquipmentNode = {
         id: nodeId,
         defId,
@@ -205,10 +361,11 @@ const Lab: React.FC = () => {
     if (!created && def.heightUnits > 0) return;
     audioEngine.createNode(nodeId, defId);
     audioEngine.registerNodeProfile(nodeId, defId, defaultState);
-  }, []);
+    },
+    [rackPosition]
+  );
 
   const handleUpdateNode = useCallback((id: string, x: number, y: number) => {
-    const zones = getWorkspaceZones();
     setState((ws) => {
       const node = ws.nodes.find((n) => n.id === id);
       if (!node) return ws;
@@ -225,19 +382,15 @@ const Lab: React.FC = () => {
           WORKSPACE_WORLD_W,
           WORKSPACE_WORLD_H
         );
-        const maxY = Math.max(
-          RACK_GRID_TOP_PX,
-          RACK_GRID_BOTTOM_PX - def.heightUnits * 44
-        );
-        snappedPos.y = Math.min(Math.max(RACK_GRID_TOP_PX, snappedPos.y), maxY);
+        const rackTop = rackPosition.y;
+        const rackBottom = rackTop + RACK_HEIGHT_PX;
+        const maxY = Math.max(rackTop, rackBottom - def.heightUnits * RACK_U_PX);
+        snappedPos.y = Math.min(Math.max(rackTop, snappedPos.y), maxY);
       } else {
         const w = def.width;
         const h = def.heightUnits > 0 ? def.heightUnits * 44 : 100;
         const pad = 16;
-        const maxX = Math.max(
-          pad,
-          zones.splitX - STAGE_RACK_GAP_PX - w - pad
-        );
+        const maxX = Math.max(pad, rackPosition.x - STAGE_RACK_GAP_PX - w - pad);
         snappedPos = {
           x: Math.min(Math.max(pad, x), maxX),
           y: Math.min(Math.max(40, y), WORKSPACE_WORLD_H - h - 20),
@@ -250,7 +403,7 @@ const Lab: React.FC = () => {
         ),
       };
     });
-  }, []);
+  }, [rackPosition]);
 
   const handleCanvasControl = useCallback(
     (nodeId: string, controlId: string, value: number | boolean | string) => {
@@ -405,7 +558,17 @@ const Lab: React.FC = () => {
   );
 
   const ws = useMemo(() => ({
-    addNode: (defId: string, _x?: number, _y?: number) => handleAddGear(defId),
+    addNode: (
+      defId: string,
+      dropWorldX?: number,
+      dropWorldY?: number
+    ) =>
+      handleAddGear(defId, {
+        dropWorld:
+          typeof dropWorldX === 'number' && typeof dropWorldY === 'number'
+            ? { x: dropWorldX, y: dropWorldY }
+            : undefined,
+      }),
     addCable: (
       fromNodeId: string,
       fromPortId: string,
@@ -541,14 +704,20 @@ const Lab: React.FC = () => {
 
   const loadLesson = useCallback(() => {
     if (lessonPreset !== 'pro-vocal-chain') return;
-    const zones = getWorkspaceZones();
-    const rx = defaultRackColumnX(zones, 400);
+    const rx = rackPosition.x + RACK_WOOD_PANEL_W;
     const nodes: EquipmentNode[] = [
       { id: 'lesson-u87', defId: 'u87-condenser', x: 96, y: 300, rotation: 0, state: {} },
-      { id: 'lesson-neve', defId: 'neve-1073', x: rx, y: 44, rotation: 0, state: { phantomPower: true, phantom: true } },
-      { id: 'lesson-la2a', defId: 'la-2a-leveling', x: rx, y: 88, rotation: 0, state: {} },
-      { id: 'lesson-1176', defId: '1176-peak-limiter', x: rx, y: 220, rotation: 0, state: {} },
-      { id: 'lesson-mixer', defId: 'professional-mixer-console', x: rx, y: 308, rotation: 0, state: {} },
+      {
+        id: 'lesson-neve',
+        defId: 'neve-1073',
+        x: rx,
+        y: rackPosition.y + 0,
+        rotation: 0,
+        state: { phantomPower: true, phantom: true },
+      },
+      { id: 'lesson-la2a', defId: 'la-2a-leveling', x: rx, y: rackPosition.y + RACK_U_PX, rotation: 0, state: {} },
+      { id: 'lesson-1176', defId: '1176-peak-limiter', x: rx, y: rackPosition.y + 176, rotation: 0, state: {} },
+      { id: 'lesson-mixer', defId: 'professional-mixer-console', x: rx, y: rackPosition.y + 264, rotation: 0, state: {} },
     ];
     const connections = [
       { id: 'lesson-c1', fromNodeId: 'lesson-u87', fromPortId: 'xlr', toNodeId: 'lesson-neve', toPortId: 'mic-in', cableColor: 'mic' },
@@ -561,7 +730,7 @@ const Lab: React.FC = () => {
       connections,
       selectedNodeId: 'lesson-neve',
     });
-  }, [hydrateWorkspace, lessonPreset]);
+  }, [hydrateWorkspace, lessonPreset, rackPosition]);
 
   const importWorkspace = useCallback(async (file: File) => {
     const text = await file.text();
@@ -691,10 +860,11 @@ const Lab: React.FC = () => {
 
   const worldZones = useMemo(() => getWorkspaceZones(), []);
   const pickerButtonStyles = useMemo(() => {
-    const stageWorldX = Math.max(80, worldZones.rackLeft * 0.5);
+    const rackOuterLeft = rackPosition.x;
+    const stageWorldX = Math.max(80, rackOuterLeft * 0.45);
     const stageWorldY = canvasPan.y + viewMetrics.h * 0.5;
-    const rackWorldX = (worldZones.rackLeft + worldZones.rackRight) * 0.5;
-    const rackWorldY = canvasPan.y + viewMetrics.h * 0.42;
+    const rackWorldX = rackOuterLeft + RACK_OUTER_W * 0.5;
+    const rackWorldY = rackPosition.y + RACK_HEIGHT_PX * 0.42;
     return {
       stage: {
         left: `${(stageWorldX - canvasPan.x) * zoom}px`,
@@ -705,7 +875,14 @@ const Lab: React.FC = () => {
         top: `${(rackWorldY - canvasPan.y) * zoom}px`,
       } as React.CSSProperties,
     };
-  }, [worldZones, canvasPan.x, canvasPan.y, viewMetrics.h, zoom]);
+  }, [
+    rackPosition.x,
+    rackPosition.y,
+    canvasPan.x,
+    canvasPan.y,
+    viewMetrics.h,
+    zoom,
+  ]);
   const focusConnection = useCallback((c: Connection) => {
     const fromNode = state.nodes.find((n) => n.id === c.fromNodeId);
     const toNode = state.nodes.find((n) => n.id === c.toNodeId);
@@ -734,6 +911,7 @@ const Lab: React.FC = () => {
     <div className="flex h-[calc(100vh-52px)] w-full flex-col overflow-hidden bg-[#0a0a0a] text-sm text-white">
       <div className="flex min-h-0 flex-1 overflow-hidden bg-[#0a0a0a]">
         <div
+          ref={workspaceSurfaceRef}
           className="relative min-h-0 min-w-0 flex-1"
           onDragOver={(e) => {
             if (e.dataTransfer.types.includes(DEF_MIME)) {
@@ -744,7 +922,16 @@ const Lab: React.FC = () => {
           onDrop={(e) => {
             e.preventDefault();
             const id = e.dataTransfer.getData(DEF_MIME);
-            if (id) void ws.addNode(id);
+            if (!id) return;
+            const canvasEl = canvasElementRef.current;
+            if (!canvasEl) {
+              void ws.addNode(id);
+              return;
+            }
+            const rect = canvasEl.getBoundingClientRect();
+            const dropWorldX = (e.clientX - rect.left) / zoom + canvasPan.x;
+            const dropWorldY = (e.clientY - rect.top) / zoom + canvasPan.y;
+            void ws.addNode(id, dropWorldX, dropWorldY);
           }}
         >
           <Renderer
@@ -752,6 +939,8 @@ const Lab: React.FC = () => {
             zoom={zoom}
             workspaceWorldW={WORKSPACE_WORLD_W}
             workspaceWorldH={WORKSPACE_WORLD_H}
+            rackPosition={rackPosition}
+            onRackPositionChange={handleRackPositionChange}
             canvasPanX={canvasPan.x}
             canvasPanY={canvasPan.y}
             onSelectNode={(id) =>
@@ -815,14 +1004,44 @@ const Lab: React.FC = () => {
             </button>
             <button
               type="button"
-              onClick={() => setZoom((z) => Math.max(0.5, z - 0.1))}
+              onClick={() => {
+                const canvasEl = canvasElementRef.current;
+                const { w: vw, h: vh } = viewportMetricsRef.current;
+                const mx = canvasEl ? canvasEl.clientWidth / 2 : vw * 0.5;
+                const my = canvasEl ? canvasEl.clientHeight / 2 : vh * 0.5;
+                setZoom((z0) => {
+                  const z1 = Math.max(0.5, z0 - 0.1);
+                  if (Math.abs(z1 - z0) < 1e-6) return z0;
+                  setCanvasPan((p0) => {
+                    const wx = p0.x + mx / z0;
+                    const wy = p0.y + my / z0;
+                    return clampPanToWorld({ x: wx - mx / z1, y: wy - my / z1 }, vw, vh);
+                  });
+                  return z1;
+                });
+              }}
               className="h-8 w-8 rounded border border-white/10 bg-black/60"
             >
               −
             </button>
             <button
               type="button"
-              onClick={() => setZoom((z) => Math.min(2, z + 0.1))}
+              onClick={() => {
+                const canvasEl = canvasElementRef.current;
+                const { w: vw, h: vh } = viewportMetricsRef.current;
+                const mx = canvasEl ? canvasEl.clientWidth / 2 : vw * 0.5;
+                const my = canvasEl ? canvasEl.clientHeight / 2 : vh * 0.5;
+                setZoom((z0) => {
+                  const z1 = Math.min(2, z0 + 0.1);
+                  if (Math.abs(z1 - z0) < 1e-6) return z0;
+                  setCanvasPan((p0) => {
+                    const wx = p0.x + mx / z0;
+                    const wy = p0.y + my / z0;
+                    return clampPanToWorld({ x: wx - mx / z1, y: wy - my / z1 }, vw, vh);
+                  });
+                  return z1;
+                });
+              }}
               className="h-8 w-8 rounded border border-white/10 bg-black/60"
             >
               +
@@ -837,9 +1056,10 @@ const Lab: React.FC = () => {
               panY={canvasPan.y}
               viewW={viewMetrics.w}
               viewH={viewMetrics.h}
+              zoom={zoom}
               nodes={state.nodes}
-              rackLeft={worldZones.rackLeft}
-              rackRight={worldZones.rackRight}
+              rackLeft={rackPosition.x}
+              rackRight={rackPosition.x + RACK_OUTER_W}
               onPanChange={(x, y) =>
                 setCanvasPan(clampPanToWorld({ x, y }, viewMetrics.w, viewMetrics.h))
               }
@@ -847,25 +1067,50 @@ const Lab: React.FC = () => {
           </div>
         </div>
 
-        {/* Right — Tabbed tools */}
+        {/* Right — Patchbay + tabbed tools (width draggable) */}
         <div
-          className={`flex h-full min-w-0 flex-col overflow-hidden border-l border-white/10 bg-neutral-900/80 backdrop-blur-xl font-medium transition-all duration-300 ${
-            showRightSidebar ? 'w-96 min-w-[384px]' : 'w-0 border-l-0'
+          className={`relative flex h-full min-w-0 flex-col overflow-hidden border-l border-white/10 bg-neutral-900/80 backdrop-blur-xl font-medium transition-[width] duration-200 ${
+            showRightSidebar ? '' : 'w-0 border-l-0'
           }`}
+          style={
+            showRightSidebar
+              ? { width: rightSidebarWidth, minWidth: SIDEBAR_W_MIN, maxWidth: SIDEBAR_W_MAX }
+              : undefined
+          }
         >
-          <div className={showRightSidebar ? 'shrink-0' : 'hidden'}>
-            <PatchbayPanel
-              nodes={state.nodes}
-              connections={state.connections}
-              selectedCableId={selectedCableId}
-              onSelectCable={setSelectedCableId}
-              onFocusConnection={focusConnection}
+          {showRightSidebar ? (
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              aria-label="Resize sidebar"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                sidebarResizeRef.current = {
+                  startX: e.clientX,
+                  startW: rightSidebarWidth,
+                };
+              }}
+              className="absolute left-0 top-0 z-20 h-full w-1.5 shrink-0 cursor-ew-resize hover:bg-amber-500/20"
             />
-          </div>
-          <Tabs
-            defaultValue="inspector"
-            className={`flex min-h-0 min-w-0 flex-1 flex-col ${showRightSidebar ? '' : 'hidden'}`}
+          ) : null}
+          <div
+            className={`flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden pl-1.5 ${
+              showRightSidebar ? '' : 'hidden'
+            }`}
           >
+            <div className="shrink-0 border-b border-white/5">
+              <PatchbayPanel
+                nodes={state.nodes}
+                connections={state.connections}
+                selectedCableId={selectedCableId}
+                onSelectCable={setSelectedCableId}
+                onFocusConnection={focusConnection}
+              />
+            </div>
+            <Tabs
+              defaultValue="inspector"
+              className="flex min-h-0 min-w-0 flex-1 flex-col"
+            >
             <TabsList className="h-auto shrink-0 flex-wrap justify-start gap-0.5 bg-[#1a1a1a] p-1">
               <TabsTrigger
                 value="inspector"
@@ -943,6 +1188,7 @@ const Lab: React.FC = () => {
               <MonitorMixPanel mixes={[]} channelNames={[]} />
             </TabsContent>
           </Tabs>
+          </div>
         </div>
       </div>
 

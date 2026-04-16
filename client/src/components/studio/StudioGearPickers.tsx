@@ -105,16 +105,16 @@ const StudioGearPickers: React.FC<StudioGearPickersProps> = ({
             type="button"
             style={stageButtonStyle}
             className={cn(
-              'pointer-events-auto absolute z-40 -translate-x-1/2 -translate-y-1/2',
-              'flex items-center gap-2 rounded-lg border border-white/15 bg-black/75 px-3 py-2',
-              'text-[11px] font-bold uppercase tracking-wide text-white/90 shadow-lg backdrop-blur-md',
-              'hover:border-amber-400/50 hover:bg-amber-500/15'
+              'group pointer-events-auto absolute z-40 -translate-x-1/2 -translate-y-1/2',
+              'flex items-center gap-1.5 rounded-full border border-white/12 bg-black/55 px-1.5 py-1.5',
+              'text-[10px] font-bold uppercase tracking-wide text-white/80 shadow-md backdrop-blur-sm',
+              'opacity-55 transition-all hover:border-amber-400/45 hover:bg-amber-500/10 hover:opacity-100'
             )}
           >
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500/25 text-lg leading-none text-amber-200">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-sm leading-none text-amber-200/95">
               +
             </span>
-            <span className="max-w-[11rem] text-left text-[10px] font-bold leading-snug">
+            <span className="max-w-0 overflow-hidden whitespace-nowrap text-left text-[9px] font-bold leading-snug opacity-0 transition-all duration-200 group-hover:max-w-[11rem] group-hover:opacity-100">
               Add Sound Source
             </span>
           </button>
@@ -161,16 +161,16 @@ const StudioGearPickers: React.FC<StudioGearPickersProps> = ({
             type="button"
             style={rackButtonStyle}
             className={cn(
-              'pointer-events-auto absolute z-40 -translate-x-1/2 -translate-y-1/2',
-              'flex items-center gap-2 rounded-lg border border-white/15 bg-black/75 px-3 py-2',
-              'text-[11px] font-bold uppercase tracking-wide text-white/90 shadow-lg backdrop-blur-md',
-              'hover:border-amber-400/50 hover:bg-amber-500/15'
+              'group pointer-events-auto absolute z-40 -translate-x-1/2 -translate-y-1/2',
+              'flex items-center gap-1.5 rounded-full border border-white/12 bg-black/55 px-1.5 py-1.5',
+              'text-[10px] font-bold uppercase tracking-wide text-white/80 shadow-md backdrop-blur-sm',
+              'opacity-55 transition-all hover:border-amber-400/45 hover:bg-amber-500/10 hover:opacity-100'
             )}
           >
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500/25 text-lg leading-none text-amber-200">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-sm leading-none text-amber-200/95">
               +
             </span>
-            <span className="max-w-[11rem] text-left text-[10px] font-bold leading-snug">
+            <span className="max-w-0 overflow-hidden whitespace-nowrap text-left text-[9px] font-bold leading-snug opacity-0 transition-all duration-200 group-hover:max-w-[11rem] group-hover:opacity-100">
               Add Outboard Gear
             </span>
           </button>

@@ -9,6 +9,8 @@ export interface WorkspaceMinimapProps {
   panY: number;
   viewW: number;
   viewH: number;
+  /** Canvas zoom (1 = 100%); viewport rect size tracks this via viewW/viewH. */
+  zoom?: number;
   nodes: EquipmentNode[];
   rackLeft: number;
   rackRight: number;
@@ -22,6 +24,7 @@ export const WorkspaceMinimap: React.FC<WorkspaceMinimapProps> = ({
   panY,
   viewW,
   viewH,
+  zoom = 1,
   nodes,
   rackLeft,
   rackRight,
@@ -108,8 +111,11 @@ export const WorkspaceMinimap: React.FC<WorkspaceMinimapProps> = ({
 
   return (
     <div className="pointer-events-auto select-none rounded border border-white/15 bg-black/75 p-1.5 shadow-lg backdrop-blur-sm">
-      <div className="mb-1 text-[9px] font-bold uppercase tracking-wider text-amber-200/80">
-        Bird&apos;s eye
+      <div className="mb-1 flex items-baseline justify-between gap-2 text-[9px] font-bold uppercase tracking-wider text-amber-200/80">
+        <span>Bird&apos;s eye</span>
+        <span className="tabular-nums text-[8px] font-semibold text-zinc-400">
+          {Math.round(zoom * 100)}%
+        </span>
       </div>
       <div
         ref={rootRef}

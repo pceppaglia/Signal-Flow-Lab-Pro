@@ -1,12 +1,23 @@
 /**
- * Empty Studio v3.0 — Stage (sides) + centered vertical rack bay (~552px).
+ * Empty Studio v3.0 — Stage (sides) + draggable vertical rack bay.
+ *
+ * Rack geometry is expressed in "world px" (canvas CSS pixels / zoom).
  */
 
 import type { EquipmentNode } from '../../../shared/equipment-types';
 import type { EquipmentDef } from '@/lib/equipment-library';
 
-/** Fixed-width vertical rack column (world px), centered on the canvas. */
-export const RACK_WIDTH_PX = 552;
+/** Wood frame width (outer), including both 24px wood side panels. */
+export const RACK_OUTER_W = 600;
+/** Internal rail width (inner), spanning between the inner faces of the rails. */
+export const RACK_INNER_W = 552;
+/** Back-compat alias: standard rack-mount faceplate width. */
+export const RACK_WIDTH_PX = RACK_INNER_W;
+
+/** Wood side panel width (px). */
+export const RACK_WOOD_PANEL_W = 24;
+/** Brushed steel rail width (px). */
+export const RACK_RAIL_W = 14;
 
 /** Breathing room between stage content and the rack (world px). */
 export const STAGE_RACK_GAP_PX = 28;
@@ -45,13 +56,13 @@ export interface StudioZones {
 export function getStudioZones(vw: number, vh: number): StudioZones {
   const safeVw = Number.isFinite(vw) && vw > 8 ? vw : 1280;
   const safeVh = Number.isFinite(vh) && vh > 8 ? vh : 800;
-  const rackW = RACK_WIDTH_PX;
+  const rackW = RACK_OUTER_W;
   const rackLeft = Math.max(0, (safeVw - rackW) / 2);
   const rackRight = rackLeft + rackW;
-  const railStripW = 14;
-  const rackLeftRail = rackLeft + railStripW / 2;
-  const rackRightRail = rackRight - railStripW / 2;
-  const innerPad = railStripW + 10;
+  const railStripW = RACK_RAIL_W;
+  // Rails sit inside the wood panels.
+  const rackLeftRail = rackLeft + RACK_WOOD_PANEL_W + railStripW / 2;
+  const rackRightRail = rackRight - RACK_WOOD_PANEL_W - railStripW / 2;
   return {
     vw: safeVw,
     vh: safeVh,
@@ -60,8 +71,8 @@ export function getStudioZones(vw: number, vh: number): StudioZones {
     rackWidth: rackW,
     splitX: rackLeft,
     rackZoneLeft: rackLeft,
-    rackInnerLeft: rackLeft + innerPad,
-    rackInnerRight: rackRight - innerPad,
+    rackInnerLeft: rackLeft + RACK_WOOD_PANEL_W,
+    rackInnerRight: rackRight - RACK_WOOD_PANEL_W,
     rackLeftRail,
     rackRightRail,
   };
@@ -74,7 +85,7 @@ export function isRackGearInVerticalBay(
   zones: StudioZones
 ): boolean {
   const cx = nodeX + nodeW * 0.5;
-  return cx >= zones.rackLeft - 2 && cx <= zones.rackRight + 2;
+  return cx >= zones.rackInnerLeft - 2 && cx <= zones.rackInnerRight + 2;
 }
 
 /** Snap rack-mount gear to 1U vertical grid and the left edge of the rack bay. */
@@ -87,20 +98,29 @@ export function snapRackNodePosition(
   vh?: number
 ): { x: number; y: number } {
   if (heightUnits <= 0) return { x, y };
-  const zones = getStudioZones(vw, vh ?? 800);
-  const fy =
-    Math.round(Math.max(0, y - RACK_GRID_TOP_PX) / RACK_U_PX) * RACK_U_PX +
-    RACK_GRID_TOP_PX;
+  void vw; // rack snapping no longer depends on fixed centered bay.
+
+  // Requirement: preserve horizontal position, but enforce 1U vertical snapping.
+  // Logic requirement: for heightUnits > 0, y must always be a multiple of
+  // `44 + RACK_GRID_TOP_PX` (with 44px = RACK_U_PX).
+  const fy = Math.round((y - RACK_GRID_TOP_PX) / RACK_U_PX) * RACK_U_PX + RACK_GRID_TOP_PX;
+  const worldH = vh ?? 800;
   const rackH = Math.max(RACK_U_PX, heightUnits * RACK_U_PX);
-  const maxY = Math.max(RACK_GRID_TOP_PX, RACK_GRID_BOTTOM_PX - rackH);
+  const maxYBound = Math.max(0, worldH - rackH);
+
+  // Clamp *while staying on-grid* so y remains a multiple of 44px increments.
+  const minSlot = Math.ceil((0 - RACK_GRID_TOP_PX) / RACK_U_PX) * RACK_U_PX + RACK_GRID_TOP_PX;
+  const maxSlot =
+    Math.floor((maxYBound - RACK_GRID_TOP_PX) / RACK_U_PX) * RACK_U_PX + RACK_GRID_TOP_PX;
+  const cy = Math.min(Math.max(fy, minSlot), maxSlot);
   return {
-    x: Math.round(zones.rackLeft),
-    y: Math.min(Math.max(RACK_GRID_TOP_PX, fy), maxY),
+    x,
+    y: cy,
   };
 }
 
 export function defaultRackColumnX(zones: StudioZones, _width: number): number {
-  return Math.round(zones.rackLeft);
+  return Math.round(zones.rackInnerLeft);
 }
 
 /** True if [a0,a1) overlaps [b0,b1) in Y. */
@@ -114,33 +134,36 @@ function yRangesOverlap(a0: number, a1: number, b0: number, b1: number): boolean
 export function nextRackSlot(
   nodes: EquipmentNode[],
   newDef: EquipmentDef,
-  zones: StudioZones,
+  rackPosition: { x: number; y: number },
   defs: EquipmentDef[]
-): { x: number; y: number } {
-  const colX = defaultRackColumnX(zones, newDef.width);
+): { x: number; y: number } | null {
+  const colX = Math.round(rackPosition.x + RACK_WOOD_PANEL_W);
   const needH = newDef.heightUnits * RACK_U_PX;
-  const maxY = Math.max(RACK_GRID_TOP_PX, RACK_GRID_BOTTOM_PX - needH);
+  const rackTop = rackPosition.y;
+  const rackBottom = rackTop + RACK_HEIGHT_PX;
+  const maxY = Math.max(rackTop, rackBottom - needH);
+
+  const bayLeft = rackPosition.x + RACK_WOOD_PANEL_W;
+  const bayRight = rackPosition.x + RACK_OUTER_W - RACK_WOOD_PANEL_W;
 
   const occupied: { top: number; bottom: number }[] = [];
   for (const n of nodes) {
     const d = defs.find((e) => e.id === n.defId);
     if (!d || d.heightUnits <= 0) continue;
     const cx = n.x + d.width * 0.5;
-    if (cx < zones.rackLeft + 4) continue;
+    if (cx < bayLeft - 12 || cx > bayRight + 12) continue;
     const top = n.y;
     const bottom = n.y + d.heightUnits * RACK_U_PX;
     occupied.push({ top, bottom });
   }
 
-  for (let y = RACK_GRID_TOP_PX; y <= maxY; y += RACK_U_PX) {
+  for (let y = rackTop; y <= maxY; y += RACK_U_PX) {
     const y1 = y + needH;
     const hit = occupied.some((o) => yRangesOverlap(y, y1, o.top, o.bottom));
     if (!hit) return { x: colX, y };
   }
 
-  let lowest = RACK_GRID_TOP_PX;
-  for (const o of occupied) lowest = Math.max(lowest, o.bottom);
-  return { x: colX, y: Math.min(lowest, maxY) };
+  return null;
 }
 
 function nodeBounds(
@@ -164,20 +187,20 @@ function rectsOverlap(
 export function nextStageSlot(
   nodes: EquipmentNode[],
   def: EquipmentDef,
-  zones: StudioZones,
+  rackOuterLeft: number,
   defs: EquipmentDef[]
 ): { x: number; y: number } {
   const pad = 28;
   const cellW = Math.max(200, def.width + 32);
   const cellH = 130;
-  const stageRight = zones.rackLeft - STAGE_RACK_GAP_PX - pad;
+  const stageRight = rackOuterLeft - STAGE_RACK_GAP_PX - pad;
   const aw = def.width;
   const ah = def.heightUnits > 0 ? def.heightUnits * 44 : 100;
 
   const candidateBoxes = nodes
     .map((n) => nodeBounds(n, defs))
     .filter((b): b is NonNullable<typeof b> => Boolean(b))
-    .filter((b) => b.x + b.w * 0.5 < zones.rackLeft - STAGE_RACK_GAP_PX);
+    .filter((b) => b.x + b.w * 0.5 < rackOuterLeft - STAGE_RACK_GAP_PX);
 
   for (let row = 0; row < 14; row += 1) {
     for (let col = 0; col < 8; col += 1) {

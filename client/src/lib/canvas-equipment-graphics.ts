@@ -10,6 +10,10 @@ import {
   RACK_WIDTH_PX,
   RACK_GRID_TOP_PX,
   RACK_GRID_BOTTOM_PX,
+  RACK_WOOD_PANEL_W,
+  RACK_RAIL_W,
+  RACK_U_PX,
+  RACK_TOTAL_U,
   snapRackNodePosition as snapRackNodePositionFromLayout,
 } from '@/lib/studio-layout';
 
@@ -76,6 +80,183 @@ function fillDarkWalnutPanel(
     ctx.fillStyle = j % 28 < 14 ? 'rgba(0,0,0,0.5)' : 'rgba(90,55,40,0.35)';
     ctx.fillRect(x, y + j, w, 1);
   }
+  ctx.restore();
+}
+
+/**
+ * Photoreal-ish top-down wood frame + integrated rails for a rack instance.
+ *
+ * Coordinate system: (x,y) is the top-left of the outer wood frame in world px.
+ */
+export function drawHardwareRackFrame(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  zoom: number
+): void {
+  if (
+    !Number.isFinite(zoom) ||
+    zoom <= 0 ||
+    !Number.isFinite(x) ||
+    !Number.isFinite(y) ||
+    width <= 0 ||
+    height <= 0
+  )
+    return;
+
+  const woodW = RACK_WOOD_PANEL_W;
+  const railW = RACK_RAIL_W;
+
+  const leftWoodX = x;
+  const rightWoodX = x + width - woodW;
+  const leftRailX = leftWoodX + woodW;
+  const rightRailX = rightWoodX - railW;
+  const innerLeftX = leftWoodX + woodW;
+  const innerRightX = rightWoodX;
+
+  ctx.save();
+
+  // --- Wood veneer back (visible in empty rack slots; drawn before rails & gear) ---
+  const innerBayW = Math.max(0, innerRightX - innerLeftX);
+  if (innerBayW > 0) {
+    fillDarkWalnutPanel(ctx, innerLeftX, y, innerBayW, height);
+  }
+
+  // --- Wood side panels (top-down lighting) ---
+  const woodTop = '#3d2b1f';
+  const woodBottom = '#1a0f0a';
+  const woodGrad = ctx.createLinearGradient(x, y, x, y + height);
+  woodGrad.addColorStop(0, woodTop);
+  woodGrad.addColorStop(0.35, '#2a1a12');
+  woodGrad.addColorStop(1, woodBottom);
+
+  const drawWoodPanel = (px: number, isRight: boolean) => {
+    // Base fill.
+    ctx.fillStyle = woodGrad;
+    ctx.fillRect(px, y, woodW, height);
+
+    // Grain: thin vertical strokes at low alpha.
+    ctx.save();
+    ctx.globalAlpha = 0.18;
+    for (let i = 0; i < woodW; i += 3) {
+      const gx = px + i + (i % 2 === 0 ? 0.2 : -0.2);
+      ctx.strokeStyle = i % 9 === 0 ? '#5b3a2a' : '#2b1a12';
+      ctx.lineWidth = 0.7 / zoom;
+      ctx.beginPath();
+      ctx.moveTo(gx, y + 2);
+      ctx.lineTo(gx + 0.6, y + height - 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Inner bevel highlight (simulate a thin 1px chamfer).
+    ctx.fillStyle = 'rgba(255,215,160,0.22)';
+    const innerEdgeX = isRight ? px + 0 : px + woodW - 1;
+    ctx.fillRect(innerEdgeX, y, 1 / zoom, height);
+
+    // Outer edge shadow for depth.
+    ctx.fillStyle = 'rgba(0,0,0,0.22)';
+    const outerEdgeX = isRight ? px + woodW - 1 : px;
+    ctx.fillRect(outerEdgeX, y, 1 / zoom, height);
+
+    // Subtle top specular sheen.
+    ctx.fillStyle = 'rgba(255,240,210,0.08)';
+    ctx.fillRect(px, y, woodW, Math.max(10, 26 / zoom));
+  };
+
+  drawWoodPanel(leftWoodX, false);
+  drawWoodPanel(rightWoodX, true);
+
+  // --- Brushed steel rails inside the wood panels ---
+  const railGrad = ctx.createLinearGradient(leftRailX, y, leftRailX + railW, y);
+  railGrad.addColorStop(0, '#2d2d2d');
+  railGrad.addColorStop(0.35, '#3a3a3a');
+  railGrad.addColorStop(0.7, '#232323');
+  railGrad.addColorStop(1, '#2d2d2d');
+
+  const drawRail = (rx: number) => {
+    ctx.fillStyle = railGrad;
+    ctx.fillRect(rx, y, railW, height);
+
+    // Brushed lines: lots of faint vertical strokes.
+    ctx.save();
+    ctx.globalAlpha = 0.22;
+    ctx.strokeStyle = '#6d6d6d';
+    ctx.lineWidth = 0.6 / zoom;
+    for (let i = 0; i < railW; i += 2) {
+      ctx.beginPath();
+      ctx.moveTo(rx + i + 0.3, y + 2);
+      ctx.lineTo(rx + i - 0.2, y + height - 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Thin edge highlight.
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = 1 / zoom;
+    ctx.strokeRect(rx + 0.5 / zoom, y + 0.5 / zoom, railW - 1 / zoom, height - 1 / zoom);
+  };
+
+  drawRail(leftRailX);
+  drawRail(rightRailX);
+
+  // --- Screw holes: every 14.6px along the rails center ---
+  const holeR = 2.2 / zoom;
+  const holeColor = '#1a1a1a';
+  const holeStep = 14.6;
+  const leftCx = leftRailX + railW * 0.5;
+  const rightCx = rightRailX + railW * 0.5;
+  const holeStartY = y + 14.6;
+  const holeEndY = y + height - 0.1;
+  for (let hy = holeStartY; hy <= holeEndY; hy += holeStep) {
+    for (const cx of [leftCx, rightCx]) {
+      ctx.beginPath();
+      ctx.fillStyle = holeColor;
+      ctx.arc(cx, hy, holeR, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+      ctx.lineWidth = 0.8 / zoom;
+      ctx.stroke();
+    }
+  }
+
+  // --- Inner depth / recess shadow inside the wood opening ---
+  const innerW = innerRightX - innerLeftX;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(innerLeftX, y, innerW, height);
+  ctx.clip();
+
+  // Top-down darkening (lighter at top, darker at bottom).
+  const innerGrad = ctx.createLinearGradient(0, y, 0, y + height);
+  innerGrad.addColorStop(0, 'rgba(0,0,0,0.06)');
+  innerGrad.addColorStop(0.55, 'rgba(0,0,0,0.18)');
+  innerGrad.addColorStop(1, 'rgba(0,0,0,0.32)');
+  ctx.fillStyle = innerGrad;
+  ctx.fillRect(innerLeftX, y, innerW, height);
+
+  // Inset side shadows near the rail/wood edges.
+  const sideFade = 26 / zoom;
+  const leftSide = ctx.createLinearGradient(innerLeftX, 0, innerLeftX + sideFade, 0);
+  leftSide.addColorStop(0, 'rgba(0,0,0,0.42)');
+  leftSide.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = leftSide;
+  ctx.fillRect(innerLeftX, y, sideFade, height);
+
+  const rightSide = ctx.createLinearGradient(innerRightX - sideFade, 0, innerRightX, 0);
+  rightSide.addColorStop(0, 'rgba(0,0,0,0)');
+  rightSide.addColorStop(1, 'rgba(0,0,0,0.42)');
+  ctx.fillStyle = rightSide;
+  ctx.fillRect(innerRightX - sideFade, y, sideFade, height);
+
+  // Soft top highlight for depth.
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.fillRect(innerLeftX, y, innerW, Math.max(8, 22 / zoom));
+  ctx.restore();
+
   ctx.restore();
 }
 
