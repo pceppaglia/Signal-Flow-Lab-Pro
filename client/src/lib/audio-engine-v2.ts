@@ -227,6 +227,18 @@ class AudioEngineV2 {
     return this.foundationalMixer?.getMasterMeter() ?? 0;
   }
 
+  getFoundationalMixerMasterMeterStereo(): {
+    l: { peak: number; rms: number };
+    r: { peak: number; rms: number };
+  } {
+    return (
+      this.foundationalMixer?.getMasterMeterStereo() ?? {
+        l: { peak: 0, rms: 0 },
+        r: { peak: 0, rms: 0 },
+      }
+    );
+  }
+
   /** Builds the internal master bus once; idempotent. */
   private ensureMasterChain(): void {
     if (!this.ctx || this.masterGain) return;

@@ -69,6 +69,30 @@ const genPorts = (count: number, prefix: string, type: SignalLevel = 'line') =>
 
 export const equipmentLibrary: EquipmentDef[] = [
   {
+    id: 'live-room-mic-panel',
+    name: 'Mic Input Panel',
+    brand: 'RecordingStudio',
+    model: 'LR-16XLR',
+    category: 'interface',
+    description: 'Stationary 16-channel wall plate feeding the control room patchbay.',
+    width: 360,
+    heightUnits: 0,
+    accentColor: '#5a5f68',
+    inputs: Array.from({ length: 16 }, (_, i) => ({
+      id: `mic-in-${i + 1}`,
+      label: `XLR ${i + 1}`,
+      type: 'mic' as const,
+      position: (i % 8 + 0.5) / 8,
+    })),
+    outputs: Array.from({ length: 16 }, (_, i) => ({
+      id: `mic-out-${i + 1}`,
+      label: `Line ${i + 1}`,
+      type: 'mic' as const,
+      position: (i % 8 + 0.5) / 8,
+    })),
+    controls: [],
+  },
+  {
     id: 'foundational-mixer-channel',
     name: 'Mixer Channel Input',
     brand: 'Foundational',
@@ -477,7 +501,7 @@ export const equipmentLibrary: EquipmentDef[] = [
   },
   {
     id: 'grace-design-hp-amp',
-    name: 'DAC/HP Amplifier',
+    name: 'Headphone Amp',
     brand: 'Grace Design',
     model: 'm-900',
     category: 'monitor',
@@ -490,6 +514,20 @@ export const equipmentLibrary: EquipmentDef[] = [
     controls: [
       { id: 'volume', label: 'VOLUME', type: 'knob', default: -20, min: -99, max: 0 }
     ]
+  },
+  {
+    id: 'reference-headphones',
+    name: 'Headphones',
+    brand: 'RecordingStudio',
+    model: 'RH-1',
+    category: 'monitor',
+    description: 'Reference headphones for playback checks.',
+    width: 130,
+    heightUnits: 0,
+    accentColor: '#1f1f1f',
+    inputs: [{ id: 'in', label: 'TRS', type: 'line', position: 0.5 }],
+    outputs: [],
+    controls: [],
   },
 
   // --- MICROPHONES ---

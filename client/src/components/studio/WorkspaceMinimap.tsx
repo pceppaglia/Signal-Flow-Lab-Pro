@@ -1,6 +1,7 @@
 import React, { useCallback, useRef } from 'react';
 import type { EquipmentNode } from '../../../../shared/equipment-types';
 import { equipmentLibrary } from '@/lib/equipment-library';
+import { equipmentNodeWorldHeight } from '@/lib/canvas-equipment-graphics';
 
 export interface WorkspaceMinimapProps {
   worldW: number;
@@ -14,6 +15,8 @@ export interface WorkspaceMinimapProps {
   nodes: EquipmentNode[];
   rackLeft: number;
   rackRight: number;
+  rackTop: number;
+  rackBottom: number;
   onPanChange: (x: number, y: number) => void;
 }
 
@@ -28,6 +31,8 @@ export const WorkspaceMinimap: React.FC<WorkspaceMinimapProps> = ({
   nodes,
   rackLeft,
   rackRight,
+  rackTop,
+  rackBottom,
   onPanChange,
 }) => {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -133,18 +138,19 @@ export const WorkspaceMinimap: React.FC<WorkspaceMinimapProps> = ({
           aria-hidden
         />
         <div
-          className="absolute top-0 rounded-sm bg-amber-900/25"
+          className="absolute rounded-sm bg-amber-900/25"
           style={{
             left: rackLeft * scale,
+            top: rackTop * scale,
             width: Math.max(0, (rackRight - rackLeft) * scale),
-            height: '100%',
+            height: Math.max(0, (rackBottom - rackTop) * scale),
           }}
           aria-hidden
         />
         {nodes.map((n) => {
           const d = equipmentLibrary.find((x) => x.id === n.defId);
           if (!d) return null;
-          const nh = d.heightUnits > 0 ? d.heightUnits * 44 : 100;
+          const nh = equipmentNodeWorldHeight(d);
           return (
             <div
               key={n.id}

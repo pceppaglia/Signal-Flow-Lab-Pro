@@ -76,6 +76,84 @@ interface StudioGearPickersProps {
   rackButtonStyle?: React.CSSProperties;
 }
 
+/** Full gear library for sidebar / docked panels (stage + rack lists). */
+export function GearLibraryPanel({ onPick }: { onPick: (defId: string) => void }) {
+  const rackByTab = UI_RACK_TAB_ORDER.reduce(
+    (acc, tab) => {
+      acc[tab] = equipmentLibrary.filter((d) => getRackPickerTab(d) === tab);
+      return acc;
+    },
+    {} as Record<UiRackTab, EquipmentDef[]>
+  );
+
+  const stageByTab = UI_STAGE_TAB_ORDER.reduce(
+    (acc, tab) => {
+      acc[tab] = equipmentLibrary.filter((d) => getStagePickerTab(d) === tab);
+      return acc;
+    },
+    {} as Record<UiStageTab, EquipmentDef[]>
+  );
+
+  return (
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto p-2">
+      <div>
+        <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-amber-200/80">
+          Sound sources
+        </p>
+        <Tabs defaultValue="microphones" className="w-full">
+          <TabsList className="mb-2 h-auto w-full flex-wrap gap-1 bg-black/40 p-1">
+            {UI_STAGE_TAB_ORDER.map((tab) => (
+              <TabsTrigger
+                key={tab}
+                value={tab}
+                className="flex-1 text-[10px] data-[state=active]:bg-amber-600 data-[state=active]:text-black"
+              >
+                {UI_STAGE_TAB_LABELS[tab]}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          {UI_STAGE_TAB_ORDER.map((tab) => (
+            <TabsContent key={tab} value={tab} className="mt-0 space-y-1.5">
+              {stageByTab[tab].length === 0 ? (
+                <p className="text-[11px] text-white/45">No items in this category.</p>
+              ) : (
+                stageByTab[tab].map((def) => <GearRow key={def.id} def={def} onPick={onPick} />)
+              )}
+            </TabsContent>
+          ))}
+        </Tabs>
+      </div>
+      <div className="border-t border-white/10 pt-2">
+        <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-amber-200/80">
+          Outboard rack
+        </p>
+        <Tabs defaultValue="preamps" className="w-full">
+          <TabsList className="mb-2 grid h-auto w-full grid-cols-2 gap-1 bg-black/40 p-1 sm:grid-cols-3">
+            {UI_RACK_TAB_ORDER.map((tab) => (
+              <TabsTrigger
+                key={tab}
+                value={tab}
+                className="text-[9px] data-[state=active]:bg-amber-600 data-[state=active]:text-black"
+              >
+                {UI_RACK_TAB_LABELS[tab]}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          {UI_RACK_TAB_ORDER.map((tab) => (
+            <TabsContent key={tab} value={tab} className="mt-0 space-y-1.5">
+              {rackByTab[tab].length === 0 ? (
+                <p className="text-[11px] text-white/45">No items in this category.</p>
+              ) : (
+                rackByTab[tab].map((def) => <GearRow key={def.id} def={def} onPick={onPick} />)
+              )}
+            </TabsContent>
+          ))}
+        </Tabs>
+      </div>
+    </div>
+  );
+}
+
 const StudioGearPickers: React.FC<StudioGearPickersProps> = ({
   onPick,
   stageButtonStyle,

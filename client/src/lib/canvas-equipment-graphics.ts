@@ -1689,6 +1689,51 @@ export interface PortPick {
 const PORT_ROW_H = 16;
 const PORT_HIT_X = 22;
 
+export const LIVE_ROOM_MIC_PANEL_DEF_ID = 'live-room-mic-panel';
+
+/** World-space height for canvas layout, hit tests, and cables (floor gear defaults to 100). */
+export function equipmentNodeWorldHeight(def: EquipmentDef): number {
+  if (def.id === LIVE_ROOM_MIC_PANEL_DEF_ID) return 120;
+  return def.heightUnits > 0 ? def.heightUnits * 44 : 100;
+}
+
+/** Mic panel XLR inputs: two rows of eight, channels 1-8 top, 9-16 bottom. */
+export function liveRoomMicPanelInputCenter(
+  node: EquipmentNode,
+  def: EquipmentDef,
+  channel1Based: number
+): { x: number; y: number } {
+  const hh = equipmentNodeWorldHeight(def);
+  const idx = channel1Based - 1;
+  const row = Math.floor(idx / 8);
+  const col = idx % 8;
+  const marginX = 18;
+  const usableW = def.width - marginX * 2;
+  const cellW = usableW / 8;
+  const cx = node.x + marginX + (col + 0.5) * cellW;
+  const cy = node.y + hh - 46 + row * 28;
+  return { x: cx, y: cy };
+}
+
+/** Line-level outputs toward the patchbay: two rows along the top (world px). */
+export function liveRoomMicPanelOutputCenter(
+  node: EquipmentNode,
+  def: EquipmentDef,
+  channel1Based: number
+): { x: number; y: number } {
+  const idx = channel1Based - 1;
+  const row = Math.floor(idx / 8);
+  const col = idx % 8;
+  const marginX = 18;
+  const usableW = def.width - marginX * 2;
+  const cellW = usableW / 8;
+  const cx = node.x + marginX + (col + 0.5) * cellW;
+  const cy = node.y + 26 + row * 22;
+  return { x: cx, y: cy };
+}
+
+const MIC_PANEL_PORT_R = 12;
+
 /** Hit-test I/O jacks: inputs along top edge, outputs along bottom (world px). */
 export function hitTestAnyPort(
   wx: number,
@@ -1697,7 +1742,31 @@ export function hitTestAnyPort(
   def: EquipmentDef,
   deskNode?: { x: number; y: number; width: number; height: number }
 ): PortPick | null {
-  const hh = deskNode?.height ?? (def.heightUnits > 0 ? def.heightUnits * 44 : 100);
+  if (def.id === LIVE_ROOM_MIC_PANEL_DEF_ID && !deskNode) {
+    for (const p of def.inputs) {
+      const m = /^mic-in-(\d+)$/.exec(p.id);
+      if (!m) continue;
+      const c = liveRoomMicPanelInputCenter(node, def, Number(m[1]));
+      const dx = wx - c.x;
+      const dy = wy - c.y;
+      if (dx * dx + dy * dy <= MIC_PANEL_PORT_R * MIC_PANEL_PORT_R) {
+        return { nodeId: node.id, portId: p.id, side: 'input', type: p.type };
+      }
+    }
+    for (const p of def.outputs) {
+      const m = /^mic-out-(\d+)$/.exec(p.id);
+      if (!m) continue;
+      const c = liveRoomMicPanelOutputCenter(node, def, Number(m[1]));
+      const dx = wx - c.x;
+      const dy = wy - c.y;
+      if (dx * dx + dy * dy <= MIC_PANEL_PORT_R * MIC_PANEL_PORT_R) {
+        return { nodeId: node.id, portId: p.id, side: 'output', type: p.type };
+      }
+    }
+    return null;
+  }
+
+  const hh = deskNode?.height ?? equipmentNodeWorldHeight(def);
   const nx = deskNode?.x ?? node.x;
   const ny = deskNode?.y ?? node.y;
 
@@ -1747,7 +1816,18 @@ export function getPortAnchor(
   portId: string,
   side: 'input' | 'output'
 ): { x: number; y: number } | null {
-  const hh = def.heightUnits > 0 ? def.heightUnits * 44 : 100;
+  if (def.id === LIVE_ROOM_MIC_PANEL_DEF_ID) {
+    if (side === 'input') {
+      const m = /^mic-in-(\d+)$/.exec(portId);
+      if (!m) return null;
+      return liveRoomMicPanelInputCenter(node, def, Number(m[1]));
+    }
+    const m = /^mic-out-(\d+)$/.exec(portId);
+    if (!m) return null;
+    return liveRoomMicPanelOutputCenter(node, def, Number(m[1]));
+  }
+
+  const hh = equipmentNodeWorldHeight(def);
   if (side === 'input') {
     const p = def.inputs.find((i) => i.id === portId);
     if (!p) return null;

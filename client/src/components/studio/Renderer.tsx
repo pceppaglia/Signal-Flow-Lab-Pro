@@ -6,9 +6,11 @@ import {
   hitTestInteractiveControl,
   hitTestAnyPort,
   getPortAnchor,
+  equipmentNodeWorldHeight,
+  liveRoomMicPanelInputCenter,
   type PortPick,
 } from '../../lib/canvas-equipment-graphics';
-import type { SignalLevel } from '../../lib/equipment-library';
+import type { EquipmentDef, SignalLevel } from '../../lib/equipment-library';
 import { equipmentLibrary, signalColors } from '../../lib/equipment-library';
 import { audioEngine } from '../../lib/audio-engine-v2';
 import {
@@ -68,6 +70,8 @@ interface RendererProps {
   canvasPanX: number;
   canvasPanY: number;
   onCanvasPanChange?: (x: number, y: number) => void;
+  /** Rack faceplate “+” opens the gear library in the sidebar (no popover). */
+  onRackLibraryClick?: () => void;
 }
 
 const KNOB_DRAG_SENS = 0.35;
@@ -313,6 +317,131 @@ function drawMiniConsoleUi(
   ctx.fillRect(meterX + 8 / z, bottom - meterH - 12 / z, 8 / z, meterH);
   ctx.fillStyle = '#ffab40';
   ctx.fillRect(meterX + 20 / z, bottom - meterH * 0.8 - 12 / z, 8 / z, meterH * 0.8);
+}
+
+function drawStationaryZones(
+  ctx: CanvasRenderingContext2D,
+  worldW: number,
+  worldH: number,
+  z: number
+): void {
+  const leftW = 420;
+  const rightW = 500;
+  ctx.save();
+  ctx.fillStyle = 'rgba(38, 53, 34, 0.24)';
+  ctx.fillRect(0, 0, leftW, worldH);
+  ctx.fillStyle = 'rgba(45, 36, 24, 0.24)';
+  ctx.fillRect(worldW - rightW, 0, rightW, worldH);
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.setLineDash([10 / z, 8 / z]);
+  ctx.strokeRect(8, 8, leftW - 16, worldH - 16);
+  ctx.strokeRect(worldW - rightW + 8, 8, rightW - 16, worldH - 16);
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = 'rgba(232, 215, 178, 0.72)';
+  ctx.font = `${14 / z}px system-ui`;
+  ctx.fillText('Studio', 18, 30 / z);
+  ctx.restore();
+}
+
+const RACK_LIBRARY_BTN = 34;
+
+function rackLibraryButtonRect(
+  rackOuterLeft: number,
+  rackTop: number
+): { x: number; y: number; w: number; h: number } {
+  const innerRight = rackOuterLeft + RACK_OUTER_W - RACK_WOOD_PANEL_W;
+  const rackBottom = rackTop + RACK_HEIGHT_PX;
+  return {
+    x: innerRight - RACK_LIBRARY_BTN - 12,
+    y: rackBottom - RACK_LIBRARY_BTN - 10,
+    w: RACK_LIBRARY_BTN,
+    h: RACK_LIBRARY_BTN,
+  };
+}
+
+function drawRackLibraryButton(
+  ctx: CanvasRenderingContext2D,
+  rackOuterLeft: number,
+  rackTop: number,
+  z: number
+): void {
+  const b = rackLibraryButtonRect(rackOuterLeft, rackTop);
+  ctx.save();
+  ctx.fillStyle = 'rgba(255,255,255,0.12)';
+  ctx.fillRect(b.x, b.y, b.w, b.h);
+  ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+  ctx.lineWidth = 1 / z;
+  ctx.strokeRect(b.x, b.y, b.w, b.h);
+  ctx.fillStyle = 'rgba(255,255,255,0.78)';
+  ctx.font = `${22 / z}px system-ui`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('+', b.x + b.w * 0.5, b.y + b.h * 0.52);
+  ctx.restore();
+}
+
+function drawLiveRoomMicPanel(
+  ctx: CanvasRenderingContext2D,
+  node: StudioState['nodes'][number],
+  def: EquipmentDef,
+  nodeH: number,
+  z: number
+): void {
+  const { x, y } = node;
+  const w = def.width;
+  ctx.save();
+  ctx.fillStyle = 'rgba(12,12,12,0.78)';
+  ctx.fillRect(x + 10 / z, y + 8 / z, w - 20 / z, nodeH - 16 / z);
+  ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+  ctx.lineWidth = 1 / z;
+  ctx.strokeRect(x + 10 / z, y + 8 / z, w - 20 / z, nodeH - 16 / z);
+
+  ctx.fillStyle = 'rgba(240,240,240,0.9)';
+  ctx.font = `${11 / z}px system-ui`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText('Mic Inputs', x + 16 / z, y + 22 / z);
+
+  for (let ch = 1; ch <= 16; ch += 1) {
+    const { x: cx, y: cy } = liveRoomMicPanelInputCenter(node, def, ch);
+    const outerR = 10 / z;
+    const face = ctx.createRadialGradient(cx - 2 / z, cy - 2 / z, 2 / z, cx, cy, outerR + 2 / z);
+    face.addColorStop(0, '#2b2f33');
+    face.addColorStop(0.62, '#111316');
+    face.addColorStop(1, '#050506');
+    ctx.fillStyle = face;
+    ctx.beginPath();
+    ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#8f9daa';
+    ctx.lineWidth = 1 / z;
+    ctx.stroke();
+    // Neutrik-style notch at the top of the socket ring.
+    ctx.fillStyle = '#2a2e33';
+    ctx.fillRect(cx - 2.1 / z, cy - outerR - 1 / z, 4.2 / z, 2.2 / z);
+
+    const pr = 2.1 / z;
+    const d = 3.5 / z;
+    const pins: [number, number][] = [
+      [-d * 0.9, -d * 0.58],
+      [d * 0.9, -d * 0.58],
+      [0, d * 0.88],
+    ];
+    ctx.fillStyle = '#0f1012';
+    for (const [dx, dy] of pins) {
+      ctx.beginPath();
+      ctx.arc(cx + dx, cy + dy, pr, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = 'rgba(220,220,220,0.85)';
+    ctx.font = `${6.5 / z}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(String(ch), cx, cy + outerR + 5 / z);
+  }
+  ctx.restore();
 }
 
 function consoleLayout(x: number, y: number, w: number, h: number, z: number) {
@@ -576,6 +705,7 @@ const Renderer: React.FC<RendererProps> = ({
   rackPosition,
   onRackPositionChange,
   onCanvasPanChange,
+  onRackLibraryClick,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const logicalSizeRef = useRef({ w: 0, h: 0 });
@@ -638,6 +768,7 @@ const Renderer: React.FC<RendererProps> = ({
   const onRackPositionChangeRef = useRef(onRackPositionChange);
   const onViewportWorldSizeRef = useRef(onViewportWorldSize);
   const onCanvasPanChangeRef = useRef(onCanvasPanChange);
+  const onRackLibraryClickRef = useRef(onRackLibraryClick);
   const lastReportedVpRef = useRef({ w: 0, h: 0 });
   const workspaceWorldRef = useRef({ w: workspaceWorldW, h: workspaceWorldH });
   const canvasPanRef = useRef({ x: canvasPanX, y: canvasPanY });
@@ -660,6 +791,7 @@ const Renderer: React.FC<RendererProps> = ({
   onRackPositionChangeRef.current = onRackPositionChange;
   onViewportWorldSizeRef.current = onViewportWorldSize;
   onCanvasPanChangeRef.current = onCanvasPanChange;
+  onRackLibraryClickRef.current = onRackLibraryClick;
   workspaceWorldRef.current = { w: workspaceWorldW, h: workspaceWorldH };
   canvasPanRef.current = { x: canvasPanX, y: canvasPanY };
 
@@ -765,6 +897,7 @@ const Renderer: React.FC<RendererProps> = ({
         ctx.fillStyle = 'rgba(20,40,72,0.12)';
         ctx.fillRect(0, 0, world.w, world.h);
       }
+      drawStationaryZones(ctx, world.w, world.h, z);
 
       const rackPos = rackPositionRef.current ?? {
         x: Math.round((world.w - RACK_OUTER_W) / 2),
@@ -775,12 +908,13 @@ const Renderer: React.FC<RendererProps> = ({
       const rackTop = rackPos.y;
 
       drawHardwareRackFrame(ctx, rackOuterLeft, rackTop, RACK_OUTER_W, RACK_HEIGHT_PX, z);
+      drawRackLibraryButton(ctx, rackOuterLeft, rackTop, z);
 
       const inViewNodeIds = new Set<string>();
       st.nodes.forEach((n) => {
         const d = equipmentLibrary.find((ed) => ed.id === n.defId);
         if (!d) return;
-        const h = d.heightUnits > 0 ? d.heightUnits * 44 : 100;
+        const h = equipmentNodeWorldHeight(d);
         if (nodeInView(n.x, n.y, d.width, h, vw, vh, pan.x, pan.y)) {
           inViewNodeIds.add(n.id);
         }
@@ -806,7 +940,7 @@ const Renderer: React.FC<RendererProps> = ({
       st.nodes.forEach((node) => {
         const def = equipmentLibrary.find((d) => d.id === node.defId);
         if (!def) return;
-        const nodeH = def.heightUnits > 0 ? def.heightUnits * 44 : 100;
+        const nodeH = equipmentNodeWorldHeight(def);
         const inView = nodeInView(node.x, node.y, def.width, nodeH, vw, vh, pan.x, pan.y);
         const nodeLevel = inView ? audioEngine.getMeterLevel(node.id) : 0;
 
@@ -823,6 +957,9 @@ const Renderer: React.FC<RendererProps> = ({
 
         if (def.id === 'professional-mixer-console') {
           drawMiniConsoleUi(ctx, node, node.x, node.y, def.width, nodeH, z, nodeLevel);
+        }
+        if (def.id === 'live-room-mic-panel') {
+          drawLiveRoomMicPanel(ctx, node, def, nodeH, z);
         }
         if (def.id === '1176-peak-limiter') {
           ctx.save();
@@ -1265,6 +1402,17 @@ const Renderer: React.FC<RendererProps> = ({
     const rackOuterRight = rackOuterLeft + RACK_OUTER_W;
     const rackTop = rackPos.y;
     const rackBottom = rackTop + RACK_HEIGHT_PX;
+    const libBtn = rackLibraryButtonRect(rackOuterLeft, rackTop);
+    if (
+      onRackLibraryClickRef.current &&
+      x >= libBtn.x &&
+      x <= libBtn.x + libBtn.w &&
+      y >= libBtn.y &&
+      y <= libBtn.y + libBtn.h
+    ) {
+      onRackLibraryClickRef.current();
+      return;
+    }
     const overLeftWood =
       x >= rackOuterLeft &&
       x <= rackOuterLeft + RACK_WOOD_PANEL_W &&
@@ -1343,7 +1491,7 @@ const Renderer: React.FC<RendererProps> = ({
       const def = equipmentLibrary.find((d) => d.id === node.defId);
       if (!def) continue;
       if (def.id === 'professional-mixer-console') {
-        const nodeH = def.heightUnits > 0 ? def.heightUnits * 44 : 100;
+        const nodeH = equipmentNodeWorldHeight(def);
         const hit = findConsoleControlHit(x, y, node, def.width, nodeH, zoomRef.current);
         if (hit) {
           onSelectNode(node.id);
@@ -1391,7 +1539,7 @@ const Renderer: React.FC<RendererProps> = ({
     const clickedNode = [...stateRef.current.nodes].reverse().find((node) => {
       const def = equipmentLibrary.find((d) => d.id === node.defId);
       if (!def) return false;
-      const hh = def.heightUnits > 0 ? def.heightUnits * 44 : 100;
+      const hh = equipmentNodeWorldHeight(def);
       return (
         x >= node.x &&
         x <= node.x + def.width &&

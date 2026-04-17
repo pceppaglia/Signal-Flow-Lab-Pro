@@ -29,8 +29,8 @@ export const RACK_HEIGHT_PX = RACK_TOTAL_U * RACK_U_PX;
 export const RACK_GRID_BOTTOM_PX = RACK_GRID_TOP_PX + RACK_HEIGHT_PX;
 
 /** Fixed world size for canvas layout (rack centered in this space; main view uses pan/zoom). */
-export const WORKSPACE_WORLD_W = 2800;
-export const WORKSPACE_WORLD_H = 1400;
+export const WORKSPACE_WORLD_W = 2200;
+export const WORKSPACE_WORLD_H = 1100;
 
 export function getWorkspaceZones(): StudioZones {
   return getStudioZones(WORKSPACE_WORLD_W, WORKSPACE_WORLD_H);

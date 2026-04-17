@@ -3,7 +3,6 @@ import { ChevronDown, ChevronUp, Headphones, VolumeX } from 'lucide-react';
 import { audioEngine } from '@/lib/audio-engine-v2';
 import type { MixerRoute } from '@/lib/foundational-mixer-graph';
 import { cn } from '@/lib/utils';
-import SubgroupStrip from './SubgroupStrip';
 import {
   BusCompNeedle,
   GlowBtn,
@@ -11,9 +10,16 @@ import {
   HiFiKnob,
   LedMeter,
   LongThrowFader,
+  MIXER_FADER_UNITY_VALUE,
 } from './mixer-primitives';
+import { MonitoringModal } from './MonitoringModal';
 
 const ROUTES: MixerRoute[] = ['master', 'sub12', 'sub34', 'sub56', 'sub78'];
+
+const EQ_T_HIGH = (hz: number) => (hz - 1500) / (16000 - 1500);
+const EQ_T_HIMID = (hz: number) => (hz - 600) / (7000 - 600);
+const EQ_T_LOMID = (hz: number) => (hz - 200) / (2500 - 200);
+const EQ_T_LOW = (hz: number) => (hz - 30) / (450 - 30);
 
 type CollapsibleSection = 'input' | 'dyn' | 'eq' | 'aux' | 'fader';
 
@@ -72,7 +78,7 @@ function defaultChannel(): ChannelUI {
     pan: 0,
     mute: false,
     solo: false,
-    fader: 0.75,
+    fader: MIXER_FADER_UNITY_VALUE,
     route: 'master',
   };
 }
@@ -131,12 +137,16 @@ const ProfessionalMixerConsole: React.FC<ProfessionalMixerConsoleProps> = ({
     Array.from({ length: 24 }, () => defaultChannel())
   );
   const [monitor, setMonitor] = useState<'near' | 'far'>('near');
-  const [masterFader, setMasterFader] = useState(0.85);
+  const [monitorModalOpen, setMonitorModalOpen] = useState(false);
+  const [masterFader, setMasterFader] = useState(MIXER_FADER_UNITY_VALUE);
   const [masterMute, setMasterMute] = useState(false);
   const [busDrive, setBusDrive] = useState(0.45);
   const [auxRet, setAuxRet] = useState<[number, number, number, number]>([0.35, 0.35, 0.35, 0.35]);
   const [subFaders, setSubFaders] = useState<[number, number, number, number]>([
-    0.85, 0.85, 0.85, 0.85,
+    MIXER_FADER_UNITY_VALUE,
+    MIXER_FADER_UNITY_VALUE,
+    MIXER_FADER_UNITY_VALUE,
+    MIXER_FADER_UNITY_VALUE,
   ]);
   const [subPan, setSubPan] = useState<[number, number, number, number]>([0, 0, 0, 0]);
   const [subMute, setSubMute] = useState<[boolean, boolean, boolean, boolean]>([
@@ -165,7 +175,6 @@ const ProfessionalMixerConsole: React.FC<ProfessionalMixerConsoleProps> = ({
   const [subEqLowFreq, setSubEqLowFreq] = useState<[number, number, number, number]>([
     120, 120, 120, 120,
   ]);
-
   const toggleStripSection = useCallback((s: CollapsibleSection) => {
     setSectionCollapsed((prev) => ({ ...prev, [s]: !prev[s] }));
   }, []);
@@ -294,8 +303,10 @@ const ProfessionalMixerConsole: React.FC<ProfessionalMixerConsoleProps> = ({
   const cAux = sectionCollapsed.aux;
   const cFader = sectionCollapsed.fader;
 
-  const masterLvl =
-    meterFrame >= 0 ? audioEngine.getFoundationalMixerMasterMeter() : 0;
+  const masterStereo =
+    meterFrame >= 0
+      ? audioEngine.getFoundationalMixerMasterMeterStereo()
+      : { l: { peak: 0, rms: 0 }, r: { peak: 0, rms: 0 } };
 
   if (minimized) {
     return (
@@ -322,9 +333,17 @@ const ProfessionalMixerConsole: React.FC<ProfessionalMixerConsoleProps> = ({
           </span>
           <div className="flex items-end gap-2">
             <span className="pb-1 text-[6px] font-bold text-zinc-600">L</span>
-            <LedMeter level={masterLvl} className="h-10 max-w-[16px]" />
+            <LedMeter
+              peak={masterStereo.l.peak}
+              rms={masterStereo.l.rms}
+              className="h-10 max-w-[16px]"
+            />
             <span className="pb-1 text-[6px] font-bold text-zinc-600">R</span>
-            <LedMeter level={masterLvl} className="h-10 max-w-[16px]" />
+            <LedMeter
+              peak={masterStereo.r.peak}
+              rms={masterStereo.r.rms}
+              className="h-10 max-w-[16px]"
+            />
           </div>
         </div>
       </div>
@@ -334,7 +353,7 @@ const ProfessionalMixerConsole: React.FC<ProfessionalMixerConsoleProps> = ({
   return (
     <div
       className={cn(
-        'relative flex min-h-0 shrink-0 flex-col rounded-t-lg p-[3px] shadow-[0_-8px_32px_rgba(0,0,0,0.5)]',
+        'relative flex w-max max-w-full min-h-0 shrink-0 flex-col rounded-t-lg p-[3px] shadow-[0_-8px_32px_rgba(0,0,0,0.5)]',
         'bg-gradient-to-b from-[#3d2818] via-[#2a1810] to-[#1a0f0a]',
         className
       )}
@@ -349,6 +368,11 @@ const ProfessionalMixerConsole: React.FC<ProfessionalMixerConsoleProps> = ({
         <ChevronDown className="h-3.5 w-3.5" strokeWidth={2.5} />
       </button>
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-t-md bg-zinc-950 ring-1 ring-black/55">
+      <MonitoringModal
+        open={monitorModalOpen}
+        onClose={() => setMonitorModalOpen(false)}
+        mode={monitor}
+      />
       <button
         type="button"
         disabled={channelCount >= 24}
@@ -363,11 +387,10 @@ const ProfessionalMixerConsole: React.FC<ProfessionalMixerConsoleProps> = ({
         + CH
       </button>
 
-      <div
-        className="flex min-h-0 flex-1 overflow-x-auto overflow-y-hidden"
-        style={{ scrollbarGutter: 'stable' }}
-      >
-        <div className="flex min-w-max items-stretch gap-0.5 px-2 py-2 pt-9">
+      <div className="flex min-h-0 flex-1 overflow-hidden" style={{ scrollbarGutter: 'stable' }}>
+        <div className="flex min-h-0 min-w-0 items-stretch gap-0">
+        <div className="min-h-0 min-w-0 shrink overflow-x-auto overflow-y-auto">
+        <div className="flex min-h-min min-w-max items-stretch gap-0.5 px-2 py-2 pt-9">
           {chIndices.map((idx) => {
             const ch = channels[idx - 1]!;
             const level =
@@ -390,7 +413,20 @@ const ProfessionalMixerConsole: React.FC<ProfessionalMixerConsoleProps> = ({
                 />
                 {!cIn && (
                   <div className="mt-1 space-y-1 border-t border-white/5 pt-1">
-                    <div className="flex justify-center">
+                    <div className="relative flex justify-center pt-5">
+                      <div className="absolute left-0 top-0">
+                        <GlowBtn
+                          active={ch.phantom}
+                          onClick={() => {
+                            const v = !ch.phantom;
+                            applyChannel(idx, { phantom: v });
+                            audioEngine.setFoundationalMixerChannelParam(idx, 'phantom48', v);
+                          }}
+                          className="px-1 py-0.5 text-[7px] leading-none"
+                        >
+                          +48V
+                        </GlowBtn>
+                      </div>
                       <HiFiKnob
                         compact
                         label="Trim"
@@ -398,6 +434,7 @@ const ProfessionalMixerConsole: React.FC<ProfessionalMixerConsoleProps> = ({
                         min={0}
                         max={1.5}
                         tone="input"
+                        unityAt={1}
                         onChange={(v) => {
                           applyChannel(idx, { trim: v });
                           audioEngine.setFoundationalMixerChannelParam(idx, 'trim', v);
@@ -456,17 +493,6 @@ const ProfessionalMixerConsole: React.FC<ProfessionalMixerConsoleProps> = ({
                         }}
                       >
                         <HpfSchematicIcon className="mx-auto h-3.5 w-[26px] text-current" />
-                      </GlowBtn>
-                      <GlowBtn
-                        active={ch.phantom}
-                        onClick={() => {
-                          const v = !ch.phantom;
-                          applyChannel(idx, { phantom: v });
-                          audioEngine.setFoundationalMixerChannelParam(idx, 'phantom48', v);
-                        }}
-                        className="text-[7px]"
-                      >
-                        +48V
                       </GlowBtn>
                     </div>
                   </div>
@@ -527,146 +553,190 @@ const ProfessionalMixerConsole: React.FC<ProfessionalMixerConsoleProps> = ({
                   onToggle={() => toggleStripSection('eq')}
                 />
                 {!cEq && (
-                  <div className="mt-1 space-y-0.5 border-t border-white/5 pt-1">
-                    <div className="flex justify-start pl-0.5">
-                      <HiFiKnob
-                        label="HF"
-                        sublabel="G ±15"
-                        value={ch.eqHigh}
-                        tone="eq"
-                        min={-15}
-                        max={15}
-                        onChange={(v) => {
-                          applyChannel(idx, { eqHigh: v });
-                          audioEngine.setFoundationalMixerChannelParam(idx, 'eqHigh', v);
-                        }}
-                      />
+                  <div className="mt-1 space-y-1 border-t border-white/5 pt-1">
+                    <div className="space-y-0.5 rounded-md border border-sky-500/25 bg-sky-950/20 px-0.5 py-1 shadow-[inset_0_0_12px_rgba(56,189,248,0.06)]">
+                      <div className="px-0.5 text-[7px] font-bold tracking-widest text-sky-300/90">
+                        HF
+                      </div>
+                      <div className="flex justify-start pl-0.5">
+                        <HiFiKnob
+                          label=""
+                          sublabel="±15 dB"
+                          value={ch.eqHigh}
+                          tone="eq"
+                          min={-15}
+                          max={15}
+                          unityAt={0}
+                          onChange={(v) => {
+                            applyChannel(idx, { eqHigh: v });
+                            audioEngine.setFoundationalMixerChannelParam(idx, 'eqHigh', v);
+                          }}
+                        />
+                      </div>
+                      <div className="flex justify-end pr-0.5">
+                        <HiFiKnob
+                          label=""
+                          sublabel="Freq"
+                          value={ch.eqHighFreq}
+                          tone="eq"
+                          min={1500}
+                          max={16000}
+                          numberFormat="freq"
+                          arcAnnotations={[
+                            { t: EQ_T_HIGH(4000), label: '4 kHz' },
+                            { t: EQ_T_HIGH(10000), label: '10 kHz' },
+                          ]}
+                          onChange={(v) => {
+                            applyChannel(idx, { eqHighFreq: v });
+                            audioEngine.setFoundationalMixerChannelParam(idx, 'eqHighFreq', v);
+                          }}
+                        />
+                      </div>
                     </div>
-                    <div className="flex justify-end pr-0.5">
-                      <HiFiKnob
-                        label="HF"
-                        sublabel="F kHz"
-                        value={ch.eqHighFreq}
-                        tone="eq"
-                        min={1500}
-                        max={16000}
-                        onChange={(v) => {
-                          applyChannel(idx, { eqHighFreq: v });
-                          audioEngine.setFoundationalMixerChannelParam(idx, 'eqHighFreq', v);
-                        }}
-                      />
+                    <div className="space-y-0.5 rounded-md border border-emerald-500/25 bg-emerald-950/18 px-0.5 py-1 shadow-[inset_0_0_12px_rgba(52,211,153,0.05)]">
+                      <div className="px-0.5 text-[7px] font-bold tracking-widest text-emerald-300/90">
+                        HMF
+                      </div>
+                      <div className="flex justify-start pl-0.5">
+                        <HiFiKnob
+                          label=""
+                          sublabel="±15 dB"
+                          value={ch.eqHiMid}
+                          tone="eq"
+                          min={-15}
+                          max={15}
+                          unityAt={0}
+                          onChange={(v) => {
+                            applyChannel(idx, { eqHiMid: v });
+                            audioEngine.setFoundationalMixerChannelParam(idx, 'eqHiMid', v);
+                          }}
+                        />
+                      </div>
+                      <div className="flex justify-end pr-0.5">
+                        <HiFiKnob
+                          label=""
+                          sublabel="Freq"
+                          value={ch.eqHiMidFreq}
+                          tone="eq"
+                          min={600}
+                          max={7000}
+                          numberFormat="freq"
+                          arcAnnotations={[
+                            { t: EQ_T_HIMID(1000), label: '1 kHz' },
+                            { t: EQ_T_HIMID(4000), label: '4 kHz' },
+                          ]}
+                          onChange={(v) => {
+                            applyChannel(idx, { eqHiMidFreq: v });
+                            audioEngine.setFoundationalMixerChannelParam(idx, 'eqHiMidFreq', v);
+                          }}
+                        />
+                      </div>
+                      <div className="flex justify-start pl-0.5">
+                        <HiFiKnob
+                          label=""
+                          value={ch.eqHiMidQ}
+                          tone="eq"
+                          min={0.3}
+                          max={6}
+                          showQBellIcons
+                          onChange={(v) => {
+                            applyChannel(idx, { eqHiMidQ: v });
+                            audioEngine.setFoundationalMixerChannelParam(idx, 'eqHiMidQ', v);
+                          }}
+                        />
+                      </div>
                     </div>
-                    <div className="flex justify-start pl-0.5">
-                      <HiFiKnob
-                        label="HMF"
-                        sublabel="G"
-                        value={ch.eqHiMid}
-                        tone="eq"
-                        min={-15}
-                        max={15}
-                        onChange={(v) => {
-                          applyChannel(idx, { eqHiMid: v });
-                          audioEngine.setFoundationalMixerChannelParam(idx, 'eqHiMid', v);
-                        }}
-                      />
+                    <div className="space-y-0.5 rounded-md border border-amber-500/28 bg-amber-950/16 px-0.5 py-1 shadow-[inset_0_0_12px_rgba(251,191,36,0.06)]">
+                      <div className="px-0.5 text-[7px] font-bold tracking-widest text-amber-200/90">
+                        LMF
+                      </div>
+                      <div className="flex justify-end pr-0.5">
+                        <HiFiKnob
+                          label=""
+                          sublabel="±15 dB"
+                          value={ch.eqLoMid}
+                          tone="eq"
+                          min={-15}
+                          max={15}
+                          unityAt={0}
+                          onChange={(v) => {
+                            applyChannel(idx, { eqLoMid: v });
+                            audioEngine.setFoundationalMixerChannelParam(idx, 'eqLoMid', v);
+                          }}
+                        />
+                      </div>
+                      <div className="flex justify-start pl-0.5">
+                        <HiFiKnob
+                          label=""
+                          sublabel="Freq"
+                          value={ch.eqLoMidFreq}
+                          tone="eq"
+                          min={200}
+                          max={2500}
+                          numberFormat="freq"
+                          arcAnnotations={[
+                            { t: EQ_T_LOMID(400), label: '400 Hz' },
+                            { t: EQ_T_LOMID(1000), label: '1 kHz' },
+                          ]}
+                          onChange={(v) => {
+                            applyChannel(idx, { eqLoMidFreq: v });
+                            audioEngine.setFoundationalMixerChannelParam(idx, 'eqLoMidFreq', v);
+                          }}
+                        />
+                      </div>
+                      <div className="flex justify-end pr-0.5">
+                        <HiFiKnob
+                          label=""
+                          value={ch.eqLoMidQ}
+                          tone="eq"
+                          min={0.3}
+                          max={6}
+                          showQBellIcons
+                          onChange={(v) => {
+                            applyChannel(idx, { eqLoMidQ: v });
+                            audioEngine.setFoundationalMixerChannelParam(idx, 'eqLoMidQ', v);
+                          }}
+                        />
+                      </div>
                     </div>
-                    <div className="flex justify-end pr-0.5">
-                      <HiFiKnob
-                        label="HMF"
-                        sublabel="F"
-                        value={ch.eqHiMidFreq}
-                        tone="eq"
-                        min={600}
-                        max={7000}
-                        onChange={(v) => {
-                          applyChannel(idx, { eqHiMidFreq: v });
-                          audioEngine.setFoundationalMixerChannelParam(idx, 'eqHiMidFreq', v);
-                        }}
-                      />
-                    </div>
-                    <div className="flex justify-start pl-0.5">
-                      <HiFiKnob
-                        label="HMF"
-                        sublabel="Q"
-                        value={ch.eqHiMidQ}
-                        tone="eq"
-                        min={0.3}
-                        max={6}
-                        onChange={(v) => {
-                          applyChannel(idx, { eqHiMidQ: v });
-                          audioEngine.setFoundationalMixerChannelParam(idx, 'eqHiMidQ', v);
-                        }}
-                      />
-                    </div>
-                    <div className="flex justify-end pr-0.5">
-                      <HiFiKnob
-                        label="LMF"
-                        sublabel="G"
-                        value={ch.eqLoMid}
-                        tone="eq"
-                        min={-15}
-                        max={15}
-                        onChange={(v) => {
-                          applyChannel(idx, { eqLoMid: v });
-                          audioEngine.setFoundationalMixerChannelParam(idx, 'eqLoMid', v);
-                        }}
-                      />
-                    </div>
-                    <div className="flex justify-start pl-0.5">
-                      <HiFiKnob
-                        label="LMF"
-                        sublabel="F"
-                        value={ch.eqLoMidFreq}
-                        tone="eq"
-                        min={200}
-                        max={2500}
-                        onChange={(v) => {
-                          applyChannel(idx, { eqLoMidFreq: v });
-                          audioEngine.setFoundationalMixerChannelParam(idx, 'eqLoMidFreq', v);
-                        }}
-                      />
-                    </div>
-                    <div className="flex justify-end pr-0.5">
-                      <HiFiKnob
-                        label="LMF"
-                        sublabel="Q"
-                        value={ch.eqLoMidQ}
-                        tone="eq"
-                        min={0.3}
-                        max={6}
-                        onChange={(v) => {
-                          applyChannel(idx, { eqLoMidQ: v });
-                          audioEngine.setFoundationalMixerChannelParam(idx, 'eqLoMidQ', v);
-                        }}
-                      />
-                    </div>
-                    <div className="flex justify-start pl-0.5">
-                      <HiFiKnob
-                        label="LF"
-                        sublabel="G ±15"
-                        value={ch.eqLow}
-                        tone="eq"
-                        min={-15}
-                        max={15}
-                        onChange={(v) => {
-                          applyChannel(idx, { eqLow: v });
-                          audioEngine.setFoundationalMixerChannelParam(idx, 'eqLow', v);
-                        }}
-                      />
-                    </div>
-                    <div className="flex justify-end pr-0.5">
-                      <HiFiKnob
-                        label="LF"
-                        sublabel="F Hz"
-                        value={ch.eqLowFreq}
-                        tone="eq"
-                        min={30}
-                        max={450}
-                        onChange={(v) => {
-                          applyChannel(idx, { eqLowFreq: v });
-                          audioEngine.setFoundationalMixerChannelParam(idx, 'eqLowFreq', v);
-                        }}
-                      />
+                    <div className="space-y-0.5 rounded-md border border-rose-800/35 bg-rose-950/22 px-0.5 py-1 shadow-[inset_0_0_12px_rgba(244,63,94,0.05)]">
+                      <div className="px-0.5 text-[7px] font-bold tracking-widest text-rose-300/85">
+                        LF
+                      </div>
+                      <div className="flex justify-start pl-0.5">
+                        <HiFiKnob
+                          label=""
+                          sublabel="±15 dB"
+                          value={ch.eqLow}
+                          tone="eq"
+                          min={-15}
+                          max={15}
+                          unityAt={0}
+                          onChange={(v) => {
+                            applyChannel(idx, { eqLow: v });
+                            audioEngine.setFoundationalMixerChannelParam(idx, 'eqLow', v);
+                          }}
+                        />
+                      </div>
+                      <div className="flex justify-end pr-0.5">
+                        <HiFiKnob
+                          label=""
+                          sublabel="Freq"
+                          value={ch.eqLowFreq}
+                          tone="eq"
+                          min={30}
+                          max={450}
+                          numberFormat="freq"
+                          arcAnnotations={[
+                            { t: EQ_T_LOW(100), label: '100 Hz' },
+                            { t: EQ_T_LOW(200), label: '200 Hz' },
+                          ]}
+                          onChange={(v) => {
+                            applyChannel(idx, { eqLowFreq: v });
+                            audioEngine.setFoundationalMixerChannelParam(idx, 'eqLowFreq', v);
+                          }}
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
@@ -679,16 +749,10 @@ const ProfessionalMixerConsole: React.FC<ProfessionalMixerConsoleProps> = ({
                 />
                 {!cAux && (
                   <div className="mt-1 space-y-0.5 border-t border-white/5 pt-1">
-                    {[0, 1, 2, 3].map((a) => (
-                      <div
-                        key={a}
-                        className={cn(
-                          'flex items-end gap-0.5',
-                          a % 2 === 0 ? 'justify-start pl-0.5' : 'justify-end pr-0.5'
-                        )}
-                      >
+                    {[0, 1, 2, 3].map((a) => {
+                      const knob = (
                         <HiFiKnob
-                          label={`A${a + 1}`}
+                          label={`${a + 1}`}
                           value={ch.aux[a]!}
                           tone="aux"
                           min={0}
@@ -704,9 +768,11 @@ const ProfessionalMixerConsole: React.FC<ProfessionalMixerConsoleProps> = ({
                             );
                           }}
                         />
+                      );
+                      const preBtn = (
                         <GlowBtn
                           active={ch.auxPre[a]!}
-                          className="mb-1 px-0.5 text-[6px]"
+                          className={cn('px-0.5 text-[6px]', a % 2 === 0 ? 'mb-0 translate-y-0.5' : 'mb-0')}
                           onClick={() => {
                             const auxPre = [...ch.auxPre] as ChannelUI['auxPre'];
                             auxPre[a] = !auxPre[a];
@@ -720,8 +786,27 @@ const ProfessionalMixerConsole: React.FC<ProfessionalMixerConsoleProps> = ({
                         >
                           {ch.auxPre[a] ? 'Pre' : 'Pst'}
                         </GlowBtn>
-                      </div>
-                    ))}
+                      );
+                      const isOdd = a % 2 === 1;
+                      return (
+                        <div
+                          key={a}
+                          className={cn('flex items-end gap-0.5 justify-start', 'pl-0.5')}
+                        >
+                          {isOdd ? (
+                            <>
+                              {preBtn}
+                              {knob}
+                            </>
+                          ) : (
+                            <>
+                              {knob}
+                              {preBtn}
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
 
@@ -732,7 +817,7 @@ const ProfessionalMixerConsole: React.FC<ProfessionalMixerConsoleProps> = ({
                   onToggle={() => toggleStripSection('fader')}
                 />
                 {!cFader && (
-                  <div className="mt-1 flex flex-1 flex-col border-t border-white/5 pt-1">
+                  <div className="mt-1 flex flex-1 flex-col justify-end border-t border-white/5 pt-1">
                     <div className="flex justify-center">
                       <HiFiKnob
                         compact
@@ -741,6 +826,7 @@ const ProfessionalMixerConsole: React.FC<ProfessionalMixerConsoleProps> = ({
                         tone="neutral"
                         min={-1}
                         max={1}
+                        unityAt={0}
                         onChange={(v) => {
                           applyChannel(idx, { pan: v });
                           audioEngine.setFoundationalMixerChannelParam(idx, 'pan', v);
@@ -808,97 +894,73 @@ const ProfessionalMixerConsole: React.FC<ProfessionalMixerConsoleProps> = ({
               </div>
             );
           })}
+        </div>
+        </div>
 
-          <div className="sticky right-0 flex h-full min-h-0 max-h-full w-[248px] shrink-0 flex-col rounded-md border border-zinc-800 bg-gradient-to-b from-zinc-950 to-black p-2 shadow-lg ring-1 ring-black/40">
-            <div className="shrink-0 text-[9px] font-bold uppercase tracking-widest text-amber-200/80">
+          <div className="relative flex h-full min-h-0 max-h-full w-max shrink-0 flex-col rounded-md border border-zinc-800 bg-gradient-to-b from-zinc-950 to-black py-2 pl-2 pr-2.5 shadow-lg ring-1 ring-black/40">
+            <div className="shrink-0 pr-1 text-[9px] font-bold uppercase tracking-widest text-amber-200/80">
               Master
             </div>
-            <div className="mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden border-t border-white/10 pt-2 pr-0.5 [scrollbar-gutter:stable]">
-              <div className="text-[8px] font-bold uppercase text-zinc-500">Subgroup buses</div>
-              <div className="-mx-1 flex max-w-full gap-1 overflow-x-auto pb-1 pt-0.5 [scrollbar-gutter:stable]">
-                {(['1–2', '3–4', '5–6', '7–8'] as const).map((label, s) => (
-                  <SubgroupStrip
-                    key={label}
-                    label={label}
-                    fader={subFaders[s]!}
-                    pan={subPan[s]!}
-                    mute={subMute[s]!}
-                    solo={subSolo[s]!}
-                    assignMain={subAssignMain[s]!}
-                    eqHigh={subEqHigh[s]!}
-                    eqLow={subEqLow[s]!}
-                    eqHighFreq={subEqHighFreq[s]!}
-                    eqLowFreq={subEqLowFreq[s]!}
-                    meterLevel={
-                      meterFrame >= 0 ? audioEngine.getFoundationalMixerSubgroupMeter(s) : 0
-                    }
-                    onFader={(v) =>
-                      setSubFaders((p) => {
-                        const n = [...p] as typeof p;
-                        n[s] = v;
-                        return n;
-                      })
-                    }
-                    onPan={(v) =>
-                      setSubPan((p) => {
-                        const n = [...p] as typeof p;
-                        n[s] = v;
-                        return n;
-                      })
-                    }
-                    onMute={(v) =>
-                      setSubMute((p) => {
-                        const n = [...p] as typeof p;
-                        n[s] = v;
-                        return n;
-                      })
-                    }
-                    onSolo={(v) =>
-                      setSubSolo((p) => {
-                        const n = [...p] as typeof p;
-                        n[s] = v;
-                        return n;
-                      })
-                    }
-                    onAssignMain={(v) =>
-                      setSubAssignMain((p) => {
-                        const n = [...p] as typeof p;
-                        n[s] = v;
-                        return n;
-                      })
-                    }
-                    onEqHigh={(v) =>
-                      setSubEqHigh((p) => {
-                        const n = [...p] as typeof p;
-                        n[s] = v;
-                        return n;
-                      })
-                    }
-                    onEqLow={(v) =>
-                      setSubEqLow((p) => {
-                        const n = [...p] as typeof p;
-                        n[s] = v;
-                        return n;
-                      })
-                    }
-                    onEqHighFreq={(v) =>
-                      setSubEqHighFreq((p) => {
-                        const n = [...p] as typeof p;
-                        n[s] = v;
-                        return n;
-                      })
-                    }
-                    onEqLowFreq={(v) =>
-                      setSubEqLowFreq((p) => {
-                        const n = [...p] as typeof p;
-                        n[s] = v;
-                        return n;
-                      })
-                    }
-                  />
-                ))}
+            <div className="mt-2 flex min-h-0 min-w-[260px] max-w-[420px] flex-1 flex-col gap-2 overflow-y-auto overflow-x-hidden border-t border-white/10 pt-2 pr-0.5">
+              <div className="flex shrink-0 items-end justify-center gap-2 border-b border-white/10 pb-2">
+                <span className="pb-2 text-[7px] font-bold text-zinc-600">L</span>
+                <LedMeter
+                  peak={masterStereo.l.peak}
+                  rms={masterStereo.l.rms}
+                  className="h-20 max-w-[18px]"
+                />
+                <span className="pb-2 text-[7px] font-bold text-zinc-600">R</span>
+                <LedMeter
+                  peak={masterStereo.r.peak}
+                  rms={masterStereo.r.rms}
+                  className="h-20 max-w-[18px]"
+                />
               </div>
-              <div className="border-t border-white/10 pt-2">
+
+              <div className="shrink-0 rounded-md border border-amber-500/35 bg-black/25 p-2 ring-1 ring-amber-400/20">
+                <div className="mb-1.5 text-[8px] font-bold uppercase tracking-wide text-amber-200/95">
+                  Monitoring
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  <GlowBtn
+                    active={monitor === 'near'}
+                    onClick={() => {
+                      setMonitor('near');
+                      setMonitorModalOpen(true);
+                    }}
+                    ariaLabel="Near field monitors"
+                  >
+                    Near field
+                  </GlowBtn>
+                  <GlowBtn
+                    active={monitor === 'far'}
+                    onClick={() => {
+                      setMonitor('far');
+                      setMonitorModalOpen(true);
+                    }}
+                    ariaLabel="Far field monitors"
+                  >
+                    Far field
+                  </GlowBtn>
+                </div>
+              </div>
+
+              <div className="shrink-0 border-b border-white/10 pb-2">
+                <div className="text-[8px] font-bold text-zinc-500">Bus comp (SSL-style)</div>
+                <div className="mt-1 flex justify-center">
+                  <HiFiKnob
+                    label="Drive"
+                    value={busDrive}
+                    min={0}
+                    max={1}
+                    tone="input"
+                    onChange={setBusDrive}
+                  />
+                </div>
+                <BusCompNeedle drive={busDrive} />
+              </div>
+
+              <div className="shrink-0 border-b border-white/10 pb-2">
                 <div className="text-[8px] font-bold text-zinc-500">Aux masters</div>
                 <div className="mt-1 grid grid-cols-2 gap-x-1 gap-y-0.5">
                   {[0, 1, 2, 3].map((i) => (
@@ -920,45 +982,156 @@ const ProfessionalMixerConsole: React.FC<ProfessionalMixerConsoleProps> = ({
                   ))}
                 </div>
               </div>
-              <div className="flex gap-1 border-t border-white/10 pt-2">
-                <GlowBtn
-                  active={monitor === 'near'}
-                  onClick={() => setMonitor('near')}
-                  ariaLabel="Near-fields"
-                >
-                  Near
-                </GlowBtn>
-                <GlowBtn
-                  active={monitor === 'far'}
-                  onClick={() => setMonitor('far')}
-                  ariaLabel="Far-fields"
-                >
-                  Far
-                </GlowBtn>
-              </div>
-              <div className="border-t border-white/10 pt-2">
-                <div className="text-[8px] font-bold text-zinc-500">Bus comp (SSL-style)</div>
-                <div className="mt-1 flex justify-center">
-                  <HiFiKnob
-                    label="Drive"
-                    value={busDrive}
-                    min={0}
-                    max={1}
-                    tone="input"
-                    onChange={setBusDrive}
-                  />
-                </div>
-                <BusCompNeedle drive={busDrive} />
-              </div>
-              <div className="flex flex-col items-center border-t border-white/10 pt-2">
-                <GlowBtn active={masterMute} onClick={() => setMasterMute((m) => !m)}>
-                  Mute
-                </GlowBtn>
-                <div className="mt-1 flex w-full items-end justify-center gap-2">
-                  <LongThrowFader value={masterFader} onChange={setMasterFader} accent="red" />
-                  <div className="flex gap-1 pb-1">
-                    <LedMeter level={masterLvl} className="h-20 max-w-[18px]" />
-                    <LedMeter level={masterLvl} className="h-20 max-w-[18px]" />
+
+              <div className="mt-auto flex min-h-0 flex-col gap-2 border-t border-white/10 pt-2">
+                <div className="text-[8px] font-bold uppercase text-zinc-500">Groups</div>
+                <div className="flex min-h-0 items-end justify-between gap-2 pb-1">
+                  <div className="grid min-w-0 flex-1 grid-cols-4 gap-1">
+                    {[0, 1, 2, 3].map((s) => (
+                      <div key={s} className="rounded border border-white/10 bg-black/35 p-1">
+                        <div className="text-center text-[7px] font-bold text-zinc-500">G{s + 1}</div>
+                        <div className="mt-0.5 flex justify-center gap-0.5">
+                          <HiFiKnob
+                            compact
+                            label="HF"
+                            sublabel="Hz"
+                            value={subEqHighFreq[s]!}
+                            min={1500}
+                            max={16000}
+                            tone="eq"
+                            onChange={(v) =>
+                              setSubEqHighFreq((p) => {
+                                const n = [...p] as typeof p;
+                                n[s] = v;
+                                return n;
+                              })
+                            }
+                          />
+                          <HiFiKnob
+                            compact
+                            label="LF"
+                            sublabel="Hz"
+                            value={subEqLowFreq[s]!}
+                            min={30}
+                            max={450}
+                            tone="eq"
+                            onChange={(v) =>
+                              setSubEqLowFreq((p) => {
+                                const n = [...p] as typeof p;
+                                n[s] = v;
+                                return n;
+                              })
+                            }
+                          />
+                        </div>
+                        <div className="mt-0.5 flex justify-center gap-0.5">
+                          <HiFiKnob
+                            compact
+                            label="HF"
+                            sublabel="dB"
+                            value={subEqHigh[s]!}
+                            min={-18}
+                            max={18}
+                            tone="eq"
+                            unityAt={0}
+                            onChange={(v) =>
+                              setSubEqHigh((p) => {
+                                const n = [...p] as typeof p;
+                                n[s] = v;
+                                return n;
+                              })
+                            }
+                          />
+                          <HiFiKnob
+                            compact
+                            label="LF"
+                            sublabel="dB"
+                            value={subEqLow[s]!}
+                            min={-18}
+                            max={18}
+                            tone="eq"
+                            unityAt={0}
+                            onChange={(v) =>
+                              setSubEqLow((p) => {
+                                const n = [...p] as typeof p;
+                                n[s] = v;
+                                return n;
+                              })
+                            }
+                          />
+                        </div>
+                        <div className="mt-0.5 flex justify-center">
+                          <HiFiKnob
+                            compact
+                            label="Pan"
+                            value={subPan[s]!}
+                            min={-1}
+                            max={1}
+                            tone="neutral"
+                            unityAt={0}
+                            onChange={(v) =>
+                              setSubPan((p) => {
+                                const n = [...p] as typeof p;
+                                n[s] = v;
+                                return n;
+                              })
+                            }
+                          />
+                        </div>
+                        <div className="mt-1 flex items-center justify-center gap-0.5">
+                          <GlowBtn
+                            active={subMute[s]!}
+                            className="h-6 w-6 p-0"
+                            onClick={() =>
+                              setSubMute((p) => {
+                                const n = [...p] as typeof p;
+                                n[s] = !n[s];
+                                return n;
+                              })
+                            }
+                          >
+                            <VolumeX className="h-3 w-3" />
+                          </GlowBtn>
+                          <GlowBtn
+                            active={subSolo[s]!}
+                            className="h-6 w-6 p-0"
+                            onClick={() =>
+                              setSubSolo((p) => {
+                                const n = [...p] as typeof p;
+                                n[s] = !n[s];
+                                return n;
+                              })
+                            }
+                          >
+                            <Headphones className="h-3 w-3" />
+                          </GlowBtn>
+                        </div>
+                        <div className="mt-1 flex justify-center">
+                          <LongThrowFader
+                            value={subFaders[s]!}
+                            onChange={(v) =>
+                              setSubFaders((p) => {
+                                const n = [...p] as typeof p;
+                                n[s] = v;
+                                return n;
+                              })
+                            }
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex shrink-0 flex-col items-center gap-1 self-stretch pb-1">
+                    <GlowBtn active={masterMute} onClick={() => setMasterMute((m) => !m)}>
+                      Mute
+                    </GlowBtn>
+                    <LongThrowFader
+                      value={masterFader}
+                      onChange={setMasterFader}
+                      accent="red"
+                      heightClass="h-40"
+                      className="mb-2"
+                    />
                   </div>
                 </div>
               </div>

@@ -30,9 +30,10 @@ function StudioHeaderBar() {
     <header className="fixed top-0 left-0 right-0 z-50 h-[52px] border-b border-white/5 bg-black/55 backdrop-blur-md">
       <div className="flex h-full items-center justify-between gap-4 px-4">
         <div className="pointer-events-auto flex min-w-0 flex-1 items-center gap-3">
-          <div
-            className="h-2 w-2 shrink-0 rounded-full bg-[#E8A020] animate-pulse"
-            aria-hidden
+          <img
+            src="/recordingstudio-logo.svg"
+            alt="RecordingStudio.com"
+            className="h-7 w-7 shrink-0"
           />
           <div className="flex min-w-0 flex-col gap-0.5 leading-none sm:flex-row sm:items-baseline sm:gap-3">
             <span className="font-serif text-lg tracking-tight text-white">

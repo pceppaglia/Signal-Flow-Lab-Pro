@@ -87,6 +87,7 @@ const SubgroupStrip: React.FC<SubgroupStripProps> = ({
             min={-18}
             max={18}
             tone="eq"
+            unityAt={0}
             onChange={onEqHigh}
           />
           <HiFiKnob
@@ -97,6 +98,7 @@ const SubgroupStrip: React.FC<SubgroupStripProps> = ({
             min={-18}
             max={18}
             tone="eq"
+            unityAt={0}
             onChange={onEqLow}
           />
         </div>
@@ -124,7 +126,16 @@ const SubgroupStrip: React.FC<SubgroupStripProps> = ({
         </div>
       </div>
       <div className="flex justify-center border-t border-white/5 pt-1">
-        <HiFiKnob compact label="Pan" value={pan} min={-1} max={1} tone="neutral" onChange={onPan} />
+        <HiFiKnob
+          compact
+          label="Pan"
+          value={pan}
+          min={-1}
+          max={1}
+          tone="neutral"
+          unityAt={0}
+          onChange={onPan}
+        />
       </div>
       <div className="flex items-center justify-center gap-1">
         <GlowBtn

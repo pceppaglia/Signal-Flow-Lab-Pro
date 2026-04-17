@@ -3,13 +3,13 @@ import Renderer from './Renderer';
 import ProfessionalMixerConsole from './ProfessionalMixerConsole';
 import { PatchbayPanel } from './PatchbayPanel';
 import { WorkspaceMinimap } from './WorkspaceMinimap';
-import StudioGearPickers, { DEF_MIME } from './StudioGearPickers';
+import { DEF_MIME, GearLibraryPanel } from './StudioGearPickers';
 import InspectorPanel from '../InspectorPanel';
 import ScenarioPanel from '../ScenarioPanel';
 import AssistantPanel from '../AssistantPanel';
-import MonitorMixPanel from '../MonitorMixPanel';
+import { Camera } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { snapRackNodePosition } from '@/lib/canvas-equipment-graphics';
+import { equipmentNodeWorldHeight, snapRackNodePosition } from '@/lib/canvas-equipment-graphics';
 import {
   WORKSPACE_WORLD_W,
   WORKSPACE_WORLD_H,
@@ -29,7 +29,9 @@ import { defaultRackEquipmentState, equipmentLibrary } from '@/lib/equipment-lib
 import { audioEngine } from '@/lib/audio-engine-v2';
 import { scenarios } from '@/lib/scenarios';
 import { isFoundationalMixerNodeId } from '@/lib/foundational-mixer-anchors';
+import { LIVE_ROOM_MIC_PANEL_NODE_ID, usePatchbayRegistry } from '@/lib/patchbay-logic';
 import { cn } from '@/lib/utils';
+import { InitialInstructions } from './InitialInstructions';
 
 /** Inspector / safety panels expect `settings` + `signalLevels`; shared nodes use `state` only. */
 function adaptNodeForLegacyPanels(node: EquipmentNode): EquipmentNode & {
@@ -64,23 +66,48 @@ const MIXER_H_MIN = 150;
 const MIXER_H_MAX = 600;
 const SIDEBAR_W_MIN = 280;
 const SIDEBAR_W_MAX = 560;
+const MIC_PANEL_DEF = equipmentLibrary.find((d) => d.id === 'live-room-mic-panel')!;
+const STATIONARY_MIC_PANEL_X = WORKSPACE_WORLD_W - RACK_OUTER_W - MIC_PANEL_DEF.width - 120;
+const STATIONARY_MIC_PANEL_Y =
+  WORKSPACE_WORLD_H - equipmentNodeWorldHeight(MIC_PANEL_DEF) - 84;
+
+function ensureStudioBaseline(nodes: EquipmentNode[]): EquipmentNode[] {
+  let next = [...nodes];
+  const pushIfMissing = (id: string, factory: () => EquipmentNode) => {
+    if (!next.some((n) => n.id === id)) next = [...next, factory()];
+  };
+  pushIfMissing(LIVE_ROOM_MIC_PANEL_NODE_ID, () => ({
+    id: LIVE_ROOM_MIC_PANEL_NODE_ID,
+    defId: 'live-room-mic-panel',
+    x: STATIONARY_MIC_PANEL_X,
+    y: STATIONARY_MIC_PANEL_Y,
+    rotation: 0,
+    state: { stationary: true },
+  }));
+  return next;
+}
 
 const Lab: React.FC = () => {
   const WORKSPACE_STORAGE_KEY = 'signal-flow-workspace-v3';
   const [state, setState] = useState<StudioState>({
-    nodes: [],
+    nodes: ensureStudioBaseline([]),
     connections: [],
     selectedNodeId: null,
   });
   const [showRightSidebar, setShowRightSidebar] = useState(true);
   const [rightSidebarWidth, setRightSidebarWidth] = useState(384);
+  const sidebarTabsRef = useRef<HTMLDivElement | null>(null);
+  const [showTabsOverflowChevron, setShowTabsOverflowChevron] = useState(false);
+  const [sidebarTab, setSidebarTab] = useState<
+    'inspector' | 'library' | 'patchbay' | 'scenario' | 'assistant'
+  >('inspector');
   const sidebarResizeRef = useRef<{ startX: number; startW: number } | null>(null);
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(0.5);
   const zoomRef = useRef(zoom);
+  const RACK_WORLD_MARGIN = 28;
   const [rackPosition, setRackPosition] = useState(() => ({
-    x: Math.round((WORKSPACE_WORLD_W - RACK_OUTER_W) / 2),
-    // Default grid top for 1U snapping.
-    y: RACK_GRID_TOP_PX,
+    x: WORKSPACE_WORLD_W - RACK_OUTER_W - RACK_WORLD_MARGIN,
+    y: WORKSPACE_WORLD_H - RACK_HEIGHT_PX - RACK_WORLD_MARGIN,
   }));
   const rackPositionRef = useRef(rackPosition);
   useEffect(() => {
@@ -125,6 +152,21 @@ const Lab: React.FC = () => {
     void audioEngine.start();
     audioEngine.ensureFoundationalMixer();
   }, []);
+
+  useEffect(() => {
+    const el = sidebarTabsRef.current;
+    if (!el) return;
+    const refresh = () => {
+      setShowTabsOverflowChevron(el.scrollWidth - el.clientWidth - el.scrollLeft > 4);
+    };
+    refresh();
+    el.addEventListener('scroll', refresh, { passive: true });
+    window.addEventListener('resize', refresh);
+    return () => {
+      el.removeEventListener('scroll', refresh);
+      window.removeEventListener('resize', refresh);
+    };
+  }, [showRightSidebar, rightSidebarWidth]);
 
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
@@ -337,7 +379,31 @@ const Lab: React.FC = () => {
           pos = nextRackSlot(prev.nodes, def, rackPosition, equipmentLibrary);
         }
       } else {
-        pos = nextStageSlot(prev.nodes, def, rackOuterLeft, equipmentLibrary);
+        if (def.id === 'grace-design-hp-amp' || def.id === 'reference-headphones') {
+          const stageRight = rackOuterLeft - STAGE_RACK_GAP_PX - 24;
+          const baseX = Math.max(24, stageRight - def.width - 60);
+          const stepY = 130;
+          const usedBoxes = prev.nodes
+            .map((n) => {
+              const d = equipmentLibrary.find((e) => e.id === n.defId);
+              if (!d || d.heightUnits > 0) return null;
+              const h = equipmentNodeWorldHeight(d);
+              return { x: n.x, y: n.y, w: d.width, h };
+            })
+            .filter((b): b is { x: number; y: number; w: number; h: number } => b !== null);
+          for (let row = 0; row < 8; row += 1) {
+            const cand = { x: baseX, y: 120 + row * stepY, w: def.width, h: equipmentNodeWorldHeight(def) };
+            const hit = usedBoxes.some(
+              (b) =>
+                !(cand.x + cand.w < b.x || cand.x > b.x + b.w || cand.y + cand.h < b.y || cand.y > b.y + b.h)
+            );
+            if (!hit) {
+              pos = { x: cand.x, y: cand.y };
+              break;
+            }
+          }
+        }
+        pos = pos ?? nextStageSlot(prev.nodes, def, rackOuterLeft, equipmentLibrary);
       }
 
       if (!pos) {
@@ -368,6 +434,7 @@ const Lab: React.FC = () => {
   );
 
   const handleUpdateNode = useCallback((id: string, x: number, y: number) => {
+    if (id === LIVE_ROOM_MIC_PANEL_NODE_ID) return;
     setState((ws) => {
       const node = ws.nodes.find((n) => n.id === id);
       if (!node) return ws;
@@ -391,7 +458,7 @@ const Lab: React.FC = () => {
         snappedPos.y = Math.min(Math.max(rackTop, snappedPos.y), maxY);
       } else {
         const w = def.width;
-        const h = def.heightUnits > 0 ? def.heightUnits * 44 : 100;
+        const h = equipmentNodeWorldHeight(def);
         const pad = 16;
         const maxX = Math.max(pad, rackPosition.x - STAGE_RACK_GAP_PX - w - pad);
         snappedPos = {
@@ -583,20 +650,25 @@ const Lab: React.FC = () => {
       defId: string,
       dropWorldX?: number,
       dropWorldY?: number
-    ) =>
-      handleAddGear(defId, {
-        dropWorld:
-          typeof dropWorldX === 'number' && typeof dropWorldY === 'number'
-            ? { x: dropWorldX, y: dropWorldY }
-            : undefined,
-      }),
+    ) => {
+      const centeredDrop =
+        typeof dropWorldX === 'number' && typeof dropWorldY === 'number'
+          ? { x: dropWorldX, y: dropWorldY }
+          : {
+              x: canvasPan.x + viewMetrics.w * 0.5,
+              y: canvasPan.y + viewMetrics.h * 0.5,
+            };
+      return handleAddGear(defId, { dropWorld: centeredDrop });
+    },
     addCable: (
       fromNodeId: string,
       fromPortId: string,
       toNodeId: string,
       toPortId: string
     ) => handleConnect(fromNodeId, fromPortId, toNodeId, toPortId),
-  }), [handleAddGear, handleConnect]);
+  }), [canvasPan.x, canvasPan.y, handleAddGear, handleConnect, viewMetrics.h, viewMetrics.w]);
+
+  const patchbayRegistry = usePatchbayRegistry(state);
 
   const handlePlay = useCallback(async () => {
     await audioEngine.start();
@@ -644,7 +716,11 @@ const Lab: React.FC = () => {
   const onRemoveNode = useCallback(() => {
     if (!state.selectedNodeId) return;
     const id = state.selectedNodeId;
-    if (isFoundationalMixerNodeId(id)) return;
+    if (
+      isFoundationalMixerNodeId(id) ||
+      id === LIVE_ROOM_MIC_PANEL_NODE_ID
+    )
+      return;
     audioEngine.disconnectNode(id);
     setState((prev) => ({
       ...prev,
@@ -678,7 +754,7 @@ const Lab: React.FC = () => {
     state.nodes.forEach((n) => audioEngine.disconnectNode(n.id));
     audioEngine.syncConnections([]);
     setState({
-      nodes: [],
+      nodes: ensureStudioBaseline([]),
       connections: [],
       selectedNodeId: null,
     });
@@ -709,7 +785,7 @@ const Lab: React.FC = () => {
   const hydrateWorkspace = useCallback((next: StudioState) => {
     latestNodesRef.current.forEach((n) => audioEngine.disconnectNode(n.id));
     audioEngine.ensureFoundationalMixer();
-    const merged = mergeRackPowerDefaults(next.nodes);
+    const merged = ensureStudioBaseline(mergeRackPowerDefaults(next.nodes));
     merged.forEach((node) => {
       const def = equipmentLibrary.find((d) => d.id === node.defId);
       if (!def) return;
@@ -772,6 +848,22 @@ const Lab: React.FC = () => {
     a.href = url;
     a.download = `signal-flow-rack-${Date.now()}.png`;
     a.click();
+  }, []);
+  const zoomBy = useCallback((delta: number) => {
+    const canvasEl = canvasElementRef.current;
+    const { w: vw, h: vh } = viewportMetricsRef.current;
+    const mx = canvasEl ? canvasEl.clientWidth / 2 : vw * 0.5;
+    const my = canvasEl ? canvasEl.clientHeight / 2 : vh * 0.5;
+    setZoom((z0) => {
+      const z1 = Math.min(2.0, Math.max(0.5, z0 + delta));
+      if (Math.abs(z1 - z0) < 1e-6) return z0;
+      setCanvasPan((p0) => {
+        const wx = p0.x + mx / z0;
+        const wy = p0.y + my / z0;
+        return clampPanToWorld({ x: wx - mx / z1, y: wy - my / z1 }, vw, vh);
+      });
+      return z1;
+    });
   }, []);
   const handleCanvasPanChange = useCallback((x: number, y: number) => {
     setCanvasPan(clampPanToWorld({ x, y }, viewMetrics.w, viewMetrics.h));
@@ -842,6 +934,28 @@ const Lab: React.FC = () => {
         </button>
         <button
           type="button"
+          onClick={capturePng}
+          className="rounded border border-white/20 bg-black/35 p-1.5 text-white/80 hover:bg-black/55"
+          aria-label="Save canvas image"
+        >
+          <Camera className="h-3.5 w-3.5" strokeWidth={2} />
+        </button>
+        <button
+          type="button"
+          onClick={() => zoomBy(-0.1)}
+          className="rounded border border-white/20 bg-black/35 px-2 py-1 text-[10px] font-bold uppercase text-white/80 hover:bg-black/55"
+        >
+          -
+        </button>
+        <button
+          type="button"
+          onClick={() => zoomBy(0.1)}
+          className="rounded border border-white/20 bg-black/35 px-2 py-1 text-[10px] font-bold uppercase text-white/80 hover:bg-black/55"
+        >
+          +
+        </button>
+        <button
+          type="button"
           onClick={() => setSfvMode((v) => !v)}
           className={`rounded border px-2 py-1 text-[9px] font-bold uppercase ${
             sfvMode
@@ -875,34 +989,12 @@ const Lab: React.FC = () => {
     exportWorkspace,
     lessonPreset,
     loadLesson,
+    capturePng,
+    zoomBy,
     sfvMode,
     blueprintMode,
   ]);
 
-  const pickerButtonStyles = useMemo(() => {
-    const rackOuterLeft = rackPosition.x;
-    const stageWorldX = Math.max(80, rackOuterLeft * 0.45);
-    const stageWorldY = canvasPan.y + viewMetrics.h * 0.5;
-    const rackWorldX = rackOuterLeft + RACK_OUTER_W * 0.5;
-    const rackWorldY = rackPosition.y + RACK_HEIGHT_PX * 0.42;
-    return {
-      stage: {
-        left: `${(stageWorldX - canvasPan.x) * zoom}px`,
-        top: `${(stageWorldY - canvasPan.y) * zoom}px`,
-      } as React.CSSProperties,
-      rack: {
-        left: `${(rackWorldX - canvasPan.x) * zoom}px`,
-        top: `${(rackWorldY - canvasPan.y) * zoom}px`,
-      } as React.CSSProperties,
-    };
-  }, [
-    rackPosition.x,
-    rackPosition.y,
-    canvasPan.x,
-    canvasPan.y,
-    viewMetrics.h,
-    zoom,
-  ]);
   const focusConnection = useCallback((c: Connection) => {
     const fromNode = state.nodes.find((n) => n.id === c.fromNodeId);
     const toNode = state.nodes.find((n) => n.id === c.toNodeId);
@@ -910,8 +1002,8 @@ const Lab: React.FC = () => {
     const fromDef = equipmentLibrary.find((d) => d.id === fromNode.defId);
     const toDef = equipmentLibrary.find((d) => d.id === toNode.defId);
     if (!fromDef || !toDef) return;
-    const fromH = fromDef.heightUnits > 0 ? fromDef.heightUnits * 44 : 100;
-    const toH = toDef.heightUnits > 0 ? toDef.heightUnits * 44 : 100;
+    const fromH = equipmentNodeWorldHeight(fromDef);
+    const toH = equipmentNodeWorldHeight(toDef);
     const cx =
       (fromNode.x + fromDef.width * 0.5 + toNode.x + toDef.width * 0.5) * 0.5;
     const cy = (fromNode.y + fromH * 0.5 + toNode.y + toH * 0.5) * 0.5;
@@ -981,6 +1073,10 @@ const Lab: React.FC = () => {
               setCanvasPan((prev) => clampPanToWorld(prev, vw, vh));
             }}
             onCanvasPanChange={handleCanvasPanChange}
+            onRackLibraryClick={() => {
+              setShowRightSidebar(true);
+              setSidebarTab('library');
+            }}
             selectedCableId={selectedCableId}
             onSelectCable={setSelectedCableId}
             onPortMouseDown={(nodeId, portId, signalType) => {
@@ -1000,11 +1096,17 @@ const Lab: React.FC = () => {
               );
             }}
           />
-          <StudioGearPickers
-            onPick={(defId) => void ws.addNode(defId)}
-            stageButtonStyle={pickerButtonStyles.stage}
-            rackButtonStyle={pickerButtonStyles.rack}
-          />
+          <button
+            type="button"
+            onClick={() => {
+              setShowRightSidebar(true);
+              setSidebarTab('library');
+            }}
+            className="absolute left-3 top-[11.5rem] z-30 h-8 w-8 rounded border border-white/20 bg-black/55 text-lg font-bold text-amber-200 hover:bg-black/70"
+            aria-label="Open gear library"
+          >
+            +
+          </button>
           <button
             type="button"
             onClick={() => setShowRightSidebar((v) => !v)}
@@ -1014,61 +1116,7 @@ const Lab: React.FC = () => {
             {showRightSidebar ? '>' : '<'}
           </button>
 
-          <div className="absolute right-4 top-3 z-30 flex gap-2">
-            <button
-              type="button"
-              onClick={capturePng}
-              className="h-8 w-8 rounded border border-white/10 bg-black/60 text-[12px]"
-            >
-              📷
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const canvasEl = canvasElementRef.current;
-                const { w: vw, h: vh } = viewportMetricsRef.current;
-                const mx = canvasEl ? canvasEl.clientWidth / 2 : vw * 0.5;
-                const my = canvasEl ? canvasEl.clientHeight / 2 : vh * 0.5;
-                setZoom((z0) => {
-                  const z1 = Math.max(0.5, z0 - 0.1);
-                  if (Math.abs(z1 - z0) < 1e-6) return z0;
-                  setCanvasPan((p0) => {
-                    const wx = p0.x + mx / z0;
-                    const wy = p0.y + my / z0;
-                    return clampPanToWorld({ x: wx - mx / z1, y: wy - my / z1 }, vw, vh);
-                  });
-                  return z1;
-                });
-              }}
-              className="h-8 w-8 rounded border border-white/10 bg-black/60"
-            >
-              −
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const canvasEl = canvasElementRef.current;
-                const { w: vw, h: vh } = viewportMetricsRef.current;
-                const mx = canvasEl ? canvasEl.clientWidth / 2 : vw * 0.5;
-                const my = canvasEl ? canvasEl.clientHeight / 2 : vh * 0.5;
-                setZoom((z0) => {
-                  const z1 = Math.min(2.0, z0 + 0.1);
-                  if (Math.abs(z1 - z0) < 1e-6) return z0;
-                  setCanvasPan((p0) => {
-                    const wx = p0.x + mx / z0;
-                    const wy = p0.y + my / z0;
-                    return clampPanToWorld({ x: wx - mx / z1, y: wy - my / z1 }, vw, vh);
-                  });
-                  return z1;
-                });
-              }}
-              className="h-8 w-8 rounded border border-white/10 bg-black/60"
-            >
-              +
-            </button>
-          </div>
-
-          <div className="pointer-events-none absolute bottom-3 right-3 z-30">
+          <div className="pointer-events-none absolute left-3 top-3 z-30">
             <WorkspaceMinimap
               worldW={WORKSPACE_WORLD_W}
               worldH={WORKSPACE_WORLD_H}
@@ -1080,6 +1128,8 @@ const Lab: React.FC = () => {
               nodes={state.nodes}
               rackLeft={rackPosition.x}
               rackRight={rackPosition.x + RACK_OUTER_W}
+              rackTop={rackPosition.y}
+              rackBottom={rackPosition.y + RACK_HEIGHT_PX}
               onPanChange={(x, y) =>
                 setCanvasPan(clampPanToWorld({ x, y }, viewMetrics.w, viewMetrics.h))
               }
@@ -1118,45 +1168,60 @@ const Lab: React.FC = () => {
               showRightSidebar ? '' : 'hidden'
             }`}
           >
-            <div className="shrink-0 border-b border-white/5">
-              <PatchbayPanel
-                nodes={state.nodes}
-                connections={state.connections}
-                selectedCableId={selectedCableId}
-                onSelectCable={setSelectedCableId}
-                onFocusConnection={focusConnection}
-              />
-            </div>
             <Tabs
-              defaultValue="inspector"
+              value={sidebarTab}
+              onValueChange={(v) => {
+                const next = v as typeof sidebarTab;
+                setSidebarTab(next);
+                if (next === 'patchbay') {
+                  setShowRightSidebar(true);
+                  setRightSidebarWidth(SIDEBAR_W_MAX);
+                }
+              }}
               className="flex min-h-0 min-w-0 flex-1 flex-col"
             >
-            <TabsList className="h-auto shrink-0 flex-wrap justify-start gap-0.5 bg-[#1a1a1a] p-1">
-              <TabsTrigger
-                value="inspector"
-                className="text-xs font-medium data-[state=active]:bg-[#E8A020] data-[state=active]:text-[#0D0D0D]"
+            <div className="relative shrink-0">
+              <TabsList
+                ref={sidebarTabsRef}
+                className="h-auto w-full flex-nowrap justify-start gap-0.5 overflow-x-auto bg-[#1a1a1a] p-1"
               >
-                Inspector
-              </TabsTrigger>
-              <TabsTrigger
-                value="scenario"
-                className="text-xs font-medium data-[state=active]:bg-[#E8A020] data-[state=active]:text-[#0D0D0D]"
-              >
-                Scenario
-              </TabsTrigger>
-              <TabsTrigger
-                value="assistant"
-                className="text-xs font-medium data-[state=active]:bg-[#E8A020] data-[state=active]:text-[#0D0D0D]"
-              >
-                Assistant
-              </TabsTrigger>
-              <TabsTrigger
-                value="monitors"
-                className="text-xs font-medium data-[state=active]:bg-[#E8A020] data-[state=active]:text-[#0D0D0D]"
-              >
-                Monitors
-              </TabsTrigger>
-            </TabsList>
+                <TabsTrigger
+                  value="inspector"
+                  className="shrink-0 text-xs font-medium data-[state=active]:bg-[#E8A020] data-[state=active]:text-[#0D0D0D]"
+                >
+                  Inspector
+                </TabsTrigger>
+                <TabsTrigger
+                  value="patchbay"
+                  className="shrink-0 text-xs font-medium data-[state=active]:bg-[#E8A020] data-[state=active]:text-[#0D0D0D]"
+                >
+                  Patchbay
+                </TabsTrigger>
+                <TabsTrigger
+                  value="library"
+                  className="shrink-0 text-xs font-medium data-[state=active]:bg-[#E8A020] data-[state=active]:text-[#0D0D0D]"
+                >
+                  Library
+                </TabsTrigger>
+                <TabsTrigger
+                  value="assistant"
+                  className="shrink-0 text-xs font-medium data-[state=active]:bg-[#E8A020] data-[state=active]:text-[#0D0D0D]"
+                >
+                  Assistant
+                </TabsTrigger>
+                <TabsTrigger
+                  value="scenario"
+                  className="shrink-0 text-xs font-medium data-[state=active]:bg-[#E8A020] data-[state=active]:text-[#0D0D0D]"
+                >
+                  Scenario
+                </TabsTrigger>
+              </TabsList>
+              {showTabsOverflowChevron ? (
+                <div className="pointer-events-none absolute right-0 top-0 flex h-full items-center bg-gradient-to-l from-[#1a1a1a] via-[#1a1a1a]/90 to-transparent px-2 text-[11px] font-bold text-amber-200/75">
+                  &gt;&gt;
+                </div>
+              ) : null}
+            </div>
 
             <TabsContent
               value="inspector"
@@ -1172,15 +1237,35 @@ const Lab: React.FC = () => {
                   allCables={state.connections as unknown[]}
                 />
               ) : (
-                <div className="flex h-full items-center justify-center p-4 text-center text-[11px] text-[#555]">
-                  Select a piece of equipment on the canvas to edit its parameters.
-                </div>
+                <InitialInstructions />
               )}
             </TabsContent>
 
             <TabsContent
-              value="scenario"
+              value="library"
               className="mt-0 min-h-0 flex-1 overflow-hidden data-[state=inactive]:hidden"
+            >
+              <GearLibraryPanel onPick={(defId) => void ws.addNode(defId)} />
+            </TabsContent>
+
+            <TabsContent
+              value="patchbay"
+              className="mt-0 min-h-0 flex-1 overflow-hidden data-[state=inactive]:hidden"
+            >
+              <PatchbayPanel
+                embedded
+                nodes={state.nodes}
+                connections={state.connections}
+                selectedCableId={selectedCableId}
+                onSelectCable={setSelectedCableId}
+                onFocusConnection={focusConnection}
+                registry={patchbayRegistry}
+                onConnect={handleConnect}
+              />
+            </TabsContent>
+            <TabsContent
+              value="scenario"
+              className="mt-0 min-h-0 flex-1 overflow-y-auto data-[state=inactive]:hidden"
             >
               <ScenarioPanel
                 scenario={activeScenario}
@@ -1190,22 +1275,14 @@ const Lab: React.FC = () => {
                 onClose={() => setScenarioHintId(null)}
               />
             </TabsContent>
-
             <TabsContent
               value="assistant"
-              className="mt-0 min-h-0 flex-1 overflow-hidden data-[state=inactive]:hidden"
+              className="mt-0 min-h-0 flex-1 overflow-y-auto data-[state=inactive]:hidden"
             >
               <AssistantPanel
                 nodes={allNodesAdapted as EquipmentNode[]}
                 cables={state.connections as never[]}
               />
-            </TabsContent>
-
-            <TabsContent
-              value="monitors"
-              className="mt-0 min-h-0 flex-1 overflow-hidden data-[state=inactive]:hidden"
-            >
-              <MonitorMixPanel mixes={[]} channelNames={[]} />
             </TabsContent>
           </Tabs>
           </div>
@@ -1234,7 +1311,7 @@ const Lab: React.FC = () => {
         <ProfessionalMixerConsole
           minimized={mixerMinimized}
           onMinimizedChange={setMixerMinimized}
-          className="min-h-0 flex-1 border-t-0"
+          className="min-h-0 w-max max-w-full flex-1 self-start border-t-0"
         />
       </div>
 

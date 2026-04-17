@@ -69,7 +69,10 @@ export class FoundationalMixerRuntime {
   readonly monitorNear: GainNode;
   readonly monitorFar: GainNode;
   readonly monitorMerge: GainNode;
-  readonly masterMeterAnalyser: AnalyserNode;
+  /** Stereo tap: post–master-mute, pre-monitor split. */
+  readonly masterMeterSplit: ChannelSplitterNode;
+  readonly masterMeterAnalyserL: AnalyserNode;
+  readonly masterMeterAnalyserR: AnalyserNode;
   readonly auxReturnGains: GainNode[] = [];
   private readonly ctx: AudioContext;
   private activeChannelCount = 4;
@@ -120,10 +123,16 @@ export class FoundationalMixerRuntime {
     this.masterFader.connect(this.masterMute);
     this.masterMute.connect(this.monitorNear);
     this.masterMute.connect(this.monitorFar);
-    this.masterMeterAnalyser = ctx.createAnalyser();
-    this.masterMeterAnalyser.fftSize = 512;
-    this.masterMeterAnalyser.smoothingTimeConstant = 0.65;
-    this.masterMute.connect(this.masterMeterAnalyser);
+    this.masterMeterSplit = ctx.createChannelSplitter(2);
+    this.masterMeterAnalyserL = ctx.createAnalyser();
+    this.masterMeterAnalyserR = ctx.createAnalyser();
+    for (const a of [this.masterMeterAnalyserL, this.masterMeterAnalyserR]) {
+      a.fftSize = 1024;
+      a.smoothingTimeConstant = 0.45;
+    }
+    this.masterMute.connect(this.masterMeterSplit);
+    this.masterMeterSplit.connect(this.masterMeterAnalyserL, 0, 0);
+    this.masterMeterSplit.connect(this.masterMeterAnalyserR, 1, 0);
     this.monitorNear.connect(this.monitorMerge);
     this.monitorFar.connect(this.monitorMerge);
     this.monitorMerge.connect(masterGain);
@@ -725,23 +734,64 @@ export class FoundationalMixerRuntime {
     return Math.min(1, peak * 1.25);
   }
 
-  getMasterMeter(): number {
-    const a = this.masterMeterAnalyser;
+  private static peakAndRmsFromAnalyser(a: AnalyserNode): { peak: number; rms: number } {
     const buf = new Float32Array(a.fftSize);
     a.getFloatTimeDomainData(buf);
     let peak = 0;
+    let sumSq = 0;
     for (let i = 0; i < buf.length; i += 1) {
-      peak = Math.max(peak, Math.abs(buf[i]!));
+      const x = buf[i]!;
+      const ax = Math.abs(x);
+      peak = Math.max(peak, ax);
+      sumSq += x * x;
     }
-    return Math.min(1, peak * 1.25);
+    const rms = Math.sqrt(sumSq / Math.max(1, buf.length));
+    return {
+      peak: Math.min(1, peak * 1.25),
+      rms: Math.min(1, rms * 2.2),
+    };
+  }
+
+  /** Mono blend (compatibility); prefer {@link getMasterMeterStereo}. */
+  getMasterMeter(): number {
+    const l = FoundationalMixerRuntime.peakAndRmsFromAnalyser(this.masterMeterAnalyserL);
+    const r = FoundationalMixerRuntime.peakAndRmsFromAnalyser(this.masterMeterAnalyserR);
+    return Math.max(l.peak, r.peak);
+  }
+
+  getMasterMeterStereo(): {
+    l: { peak: number; rms: number };
+    r: { peak: number; rms: number };
+  } {
+    return {
+      l: FoundationalMixerRuntime.peakAndRmsFromAnalyser(this.masterMeterAnalyserL),
+      r: FoundationalMixerRuntime.peakAndRmsFromAnalyser(this.masterMeterAnalyserR),
+    };
   }
 
   dispose(): void {
     try {
+      this.channels.forEach((ch) => {
+        ch.routeMaster.disconnect();
+        ch.routeSub12.disconnect();
+        ch.routeSub34.disconnect();
+        ch.routeSub56.disconnect();
+        ch.routeSub78.disconnect();
+        ch.meterAnalyser.disconnect();
+      });
+
+      this.subGroups.forEach((sub) => {
+        sub.mainStereoAssign.disconnect();
+        sub.meterAnalyser.disconnect();
+      });
+
       this.programBus.disconnect();
+      this.masterMeterSplit.disconnect();
+      this.masterMeterAnalyserL.disconnect();
+      this.masterMeterAnalyserR.disconnect();
       this.monitorMerge.disconnect();
-    } catch {
-      // no-op
+    } catch (e) {
+      console.warn('Mixer disposal error:', e);
     }
   }
 }
