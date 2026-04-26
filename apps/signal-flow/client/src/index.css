@@ -52,13 +52,20 @@
   /* GLOBAL FONT SCALE INCREASE */
   html {
     font-size: 110%; /* Makes all 'rem' units 10% larger */
+    min-height: 100%;
   }
 
   body {
     @apply bg-background text-foreground font-sans;
-    overflow: hidden;
+    min-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  #root {
+    min-height: 100%;
   }
 
   /* Force headers to be bold and clear */

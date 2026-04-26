@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 450 60">
+  <!-- Generator: Adobe Illustrator 30.2.1, SVG Export Plug-In . SVG Version: 2.1.1 Build 1)  -->
+  <defs>
+    <style>
+      .st0 {
+        stroke-width: 1.25px;
+      }
+
+      .st0, .st1 {
+        stroke: #c0392b;
+      }
+
+      .st0, .st1, .st2, .st3, .st4, .st5, .st6, .st7, .st8, .st9, .st10, .st11, .st12 {
+        fill: none;
+      }
+
+      .st0, .st1, .st2, .st4, .st5, .st6, .st7, .st8, .st13, .st9, .st10, .st11, .st12 {
+        stroke-miterlimit: 1;
+      }
+
+      .st0, .st1, .st2, .st5, .st6, .st8, .st9, .st11, .st12 {
+        stroke-linecap: round;
+      }
+
+      .st0, .st14, .st15, .st16, .st4, .st17, .st9, .st10 {
+        isolation: isolate;
+      }
+
+      .st0, .st10 {
+        opacity: .4;
+      }
+
+      .st1, .st6 {
+        stroke-width: .75px;
+      }
+
+      .st14 {
+        font-size: 20px;
+        letter-spacing: .1em;
+      }
+
+      .st14, .st15, .st16, .st17 {
+        font-family: Impact, Impact;
+      }
+
+      .st14, .st18 {
+        fill: #e8a020;
+      }
+
+      .st19 {
+        fill: #0d0d0d;
+      }
+
+      .st15 {
+        fill: #f5f0e8;
+        font-size: 28px;
+        letter-spacing: .07em;
+      }
+
+      .st16 {
+        font-size: 5.5px;
+      }
+
+      .st16, .st13 {
+        fill: #141414;
+      }
+
+      .st2 {
+        stroke: #4a4740;
+      }
+
+      .st2, .st8 {
+        stroke-width: .25px;
+      }
+
+      .st3 {
+        stroke: #252525;
+        stroke-width: 1.5px;
+      }
+
+      .st4 {
+        opacity: .3;
+        stroke: #141414;
+        stroke-width: .12px;
+      }
+
+      .st5 {
+        stroke-width: .55px;
+      }
+
+      .st5, .st6 {
+        stroke: #a89f94;
+      }
+
+      .st7 {
+        stroke: #3d3a36;
+        stroke-width: .38px;
+      }
+
+      .st17 {
+        fill: #a89f94;
+        font-size: 22px;
+        letter-spacing: .09em;
+      }
+
+      .st8 {
+        stroke: #6b2e25;
+      }
+
+      .st13 {
+        stroke-width: .73px;
+      }
+
+      .st13, .st10, .st11, .st12 {
+        stroke: #e8a020;
+      }
+
+      .st9 {
+        opacity: .35;
+        stroke: #000;
+        stroke-width: 1.12px;
+      }
+
+      .st10 {
+        stroke-width: .3px;
+      }
+
+      .st11 {
+        stroke-width: .7px;
+      }
+
+      .st12 {
+        stroke-width: .88px;
+      }
+    </style>
+  </defs>
+  <rect class="st19" x="0" y="0" width="450" height="60" rx="4" ry="4"/>
+  <g>
+    <rect class="st13" x="12" y="6" width="71" height="48" rx="2.5" ry="2.5"/>
+    <path class="st7" d="M19.35,31.25c8.97-15.55,28.85-20.88,44.39-11.91,4.95,2.85,9.05,6.96,11.91,11.91"/>
+    <path class="st0" d="M68.4,22.6c2.9,2.44,5.36,5.37,7.25,8.65"/>
+    <line class="st6" x1="19.77" y1="31.5" x2="24.12" y2="34"/>
+    <line class="st2" x1="21.27" y1="29.15" x2="23.32" y2="30.58"/>
+    <line class="st2" x1="22.98" y1="26.92" x2="24.9" y2="28.55"/>
+    <line class="st2" x1="24.88" y1="24.88" x2="26.65" y2="26.65"/>
+    <line class="st5" x1="26.92" y1="22.98" x2="30.15" y2="26.83"/>
+    <line class="st2" x1="29.15" y1="21.27" x2="30.58" y2="23.33"/>
+    <line class="st2" x1="31.5" y1="19.77" x2="32.75" y2="21.95"/>
+    <line class="st2" x1="33.98" y1="18.5" x2="35.02" y2="20.77"/>
+    <line class="st5" x1="36.55" y1="17.43" x2="38.27" y2="22.12"/>
+    <line class="st2" x1="39.23" y1="16.6" x2="39.88" y2="19"/>
+    <line class="st2" x1="41.95" y1="15.98" x2="42.38" y2="18.45"/>
+    <line class="st2" x1="44.7" y1="15.62" x2="44.92" y2="18.1"/>
+    <line class="st5" x1="47.5" y1="15.5" x2="47.5" y2="20.5"/>
+    <line class="st2" x1="50.3" y1="15.62" x2="50.08" y2="18.1"/>
+    <line class="st2" x1="53.05" y1="15.98" x2="52.62" y2="18.45"/>
+    <line class="st2" x1="55.78" y1="16.6" x2="55.12" y2="19"/>
+    <line class="st5" x1="58.45" y1="17.43" x2="56.72" y2="22.12"/>
+    <line class="st2" x1="61.03" y1="18.5" x2="59.97" y2="20.77"/>
+    <line class="st2" x1="63.5" y1="19.77" x2="62.25" y2="21.95"/>
+    <line class="st2" x1="65.85" y1="21.27" x2="64.42" y2="23.33"/>
+    <line class="st12" x1="68.08" y1="22.98" x2="64.85" y2="26.83"/>
+    <line class="st8" x1="70.12" y1="24.88" x2="68.35" y2="26.65"/>
+    <line class="st8" x1="72.03" y1="26.92" x2="70.1" y2="28.55"/>
+    <line class="st8" x1="73.72" y1="29.15" x2="71.67" y2="30.58"/>
+    <line class="st1" x1="75.22" y1="31.5" x2="70.88" y2="34"/>
+    <line class="st9" x1="47.5" y1="47.5" x2="70.85" y2="28.6"/>
+    <line class="st11" x1="47.5" y1="47.5" x2="70.47" y2="28.23"/>
+    <circle class="st10" cx="47.5" cy="47.5" r="5.5"/>
+    <circle class="st18" cx="47.5" cy="47.5" r="5"/>
+    <text class="st16" transform="translate(44.6 49.25)"><tspan x="0" y="0">RS</tspan></text>
+    <circle class="st4" cx="47.5" cy="47.5" r="4.38"/>
+  </g>
+  <line class="st3" x1="84" y1="10" x2="84" y2="50"/>
+  <g>
+    <text class="st15" transform="translate(96 40)"><tspan x="0" y="0">RECORDING </tspan></text>
+    <text class="st17" transform="translate(245.2 40)"><tspan x="0" y="0">STUDIO</tspan></text>
+    <text class="st14" transform="translate(321.69 40.48)"><tspan x="0" y="0">.COM</tspan></text>
+  </g>
+</svg>

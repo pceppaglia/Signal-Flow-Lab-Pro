@@ -1020,7 +1020,7 @@ const Lab: React.FC = () => {
   }, [state.nodes, viewMetrics.w, viewMetrics.h]);
 
   return (
-    <div className="flex h-[calc(100vh-52px)] w-full flex-col overflow-hidden bg-[#0a0a0a] text-sm text-white">
+    <div className="flex h-[calc(100vh-5rem)] w-full flex-col overflow-hidden bg-[#0a0a0a] text-sm text-white">
       <div className="flex min-h-0 flex-1 overflow-hidden bg-[#0a0a0a]">
         <div
           ref={workspaceSurfaceRef}
