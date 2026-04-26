@@ -1,15 +1,14 @@
 {
   "name": "the-lab",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "private": true,
   "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "vocal:dev": "turbo dev --filter=vocal-chain-matchmaker",
+    "signal:dev": "turbo dev --filter=signal-flow-lab"
+  },
   "devDependencies": {
     "turbo": "^2.9.6"
   }
