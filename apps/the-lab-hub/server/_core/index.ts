@@ -1,12 +1,12 @@
-// apps/signal-flow/server/_core/index.ts
+// apps/the-lab-hub/server/_core/index.ts
 import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { appRouter } from "../routers";
-import { createContext } from "./context";
-import { serveStatic, setupVite } from "./vite";
+import { appRouter } from "../routers"; // This will be created later
+import { createContext } from "./context"; // This will be created later
+import { serveStatic, setupVite } from "./vite"; // This will be created later
 
 function isPortAvailable(port: number ): Promise<boolean> {
   return new Promise(resolve => {
@@ -33,9 +33,7 @@ async function startServer() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-  // REMOVE: registerOAuthRoutes(app); // No OAuth routes for now
-
-  // tRPC API
+  // tRPC API (if any for the hub)
   app.use(
     "/api/trpc",
     createExpressMiddleware({

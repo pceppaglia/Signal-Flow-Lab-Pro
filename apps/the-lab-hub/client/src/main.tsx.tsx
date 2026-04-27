@@ -1,4 +1,4 @@
-// apps/signal-flow/client/src/main.tsx
+// apps/the-lab-hub/client/src/main.tsx
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";

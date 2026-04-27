@@ -1,5 +1,6 @@
-import { BRANDING_HORIZ_LOGO_URL } from '@/const';
-import { cn } from '@/lib/utils';
+// apps/the-lab-hub/client/src/components/BrandLabLockup.tsx
+import { BRANDING_HORIZ_LOGO_URL } from '@rs/constants'; // Will be created later
+import { cn } from '@rs/utils'; // Will be created later
 import { Link } from 'wouter';
 
 type BrandLabLockupProps = {

@@ -1,14 +1,27 @@
+// turbo.json
 {
   "$schema": "https://turbo.build/schema.json",
-  "tasks": {
+  "pipeline": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+      "outputs": ["dist/**", ".next/**", "!**/.next/cache/**"]
     },
-    "lint": {},
+    "lint": {
+      "outputs": []
+    },
     "dev": {
       "cache": false,
       "persistent": true
+    },
+    "vocal:dev": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["@rs/the-lab-hub#dev"]
+    },
+    "signal:dev": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["@rs/signal-flow#dev"]
     }
   }
 }
