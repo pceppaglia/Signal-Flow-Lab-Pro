@@ -30,7 +30,7 @@ import { audioEngine } from '@/lib/audio-engine-v2';
 import { scenarios } from '@/lib/scenarios';
 import { isFoundationalMixerNodeId } from '@/lib/foundational-mixer-anchors';
 import { LIVE_ROOM_MIC_PANEL_NODE_ID, usePatchbayRegistry } from '@/lib/patchbay-logic';
-import { cn } from '@/lib/utils';
+import { cn } from '@rs/utils';
 import { InitialInstructions } from './InitialInstructions';
 
 /** Inspector / safety panels expect `settings` + `signalLevels`; shared nodes use `state` only. */

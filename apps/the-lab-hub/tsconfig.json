@@ -1,4 +1,3 @@
-// apps/the-lab-hub/tsconfig.json
 {
   "compilerOptions": {
     "target": "ES2020",
@@ -29,5 +28,10 @@
     }
   },
   "include": ["client/src/**/*.ts", "client/src/**/*.d.ts", "client/src/**/*.tsx", "client/src/**/*.js", "shared/**/*.ts", "server/**/*.ts"],
-  "exclude": ["node_modules", "build", "dist", "**/*.test.ts", "**/*.test.tsx"]
+  "exclude": ["node_modules", "build", "dist", "**/*.test.ts", "**/*.test.tsx"],
+  "references": [
+    { "path": "../../packages/constants" },
+    { "path": "../../packages/ui" },
+    { "path": "../../packages/utils" }
+  ]
 }

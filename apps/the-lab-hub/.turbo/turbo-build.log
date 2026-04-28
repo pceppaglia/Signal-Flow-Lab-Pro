@@ -1,0 +1,23 @@
+
+
+> @rs/the-lab-hub@1.0.0 prebuild /Users/paulceppaglia/Developer/rs-unified-lab/apps/the-lab-hub
+> pnpm run sync:branding
+
+
+> @rs/the-lab-hub@1.0.0 sync:branding /Users/paulceppaglia/Developer/rs-unified-lab/apps/the-lab-hub
+> mkdir -p client/public/branding && cp ../../packages/branding/logos/SVG/*.svg client/public/branding/
+
+
+> @rs/the-lab-hub@1.0.0 build /Users/paulceppaglia/Developer/rs-unified-lab/apps/the-lab-hub
+> vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+
+[36mvite v7.3.2 [32mbuilding client environment for production...[36m[39m
+[2K[1Gtransforming (1) [2msrc/main.tsx[22m[2K[1G[2K[1Gtransforming (9) [2msrc/app/vocal-matchmaker/page.tsx[22m[2K[1Gtransforming (26) [2m../../../node_modules/.pnpm/wouter@3.9.0_patch_hash=93cdaa4d5c5c24fbed307df55cba3ae783f79523ad0[2K[1Gtransforming (29) [2m../../../node_modules/.pnpm/react@19.2.5/node_modules/react/cjs/react.production.js[22m[2K[1Gtransforming (1027) [2m../../../node_modules/.pnpm/react-dom@19.2.5_react@19.2.5/node_modules/react-dom/cjs/react-do[2K[1Gtransforming (1441) [2m../../../node_modules/.pnpm/lucide-react@0.453.0_react@19.2.5/node_modules/lucide-react/dist/[2K[1Gtransforming (1590) [2m../../../node_modules/.pnpm/lucide-react@0.453.0_react@19.2.5/node_modules/lucide-react/dist/[2K[1G[2K[1G[2K[1G[2K[1G[2K[1G[2K[1G[2K[1G[32m✓[39m 1650 modules transformed.
+[2K[1Grendering chunks (1)...[2K[1G[2K[1Gcomputing gzip size (0)...[2K[1Gcomputing gzip size (1)...[2K[1Gcomputing gzip size (2)...[2K[1Gcomputing gzip size (3)...[2K[1G[2m../dist/public/[22m[32mindex.html                 [39m[1m[2m367.70 kB[22m[1m[22m[2m │ gzip: 105.53 kB[22m
+[2m../dist/public/[22m[2massets/[22m[35mindex-D4-w0vu5.css  [39m[1m[2m 26.36 kB[22m[1m[22m[2m │ gzip:   5.94 kB[22m
+[2m../dist/public/[22m[2massets/[22m[36mindex-cB_7WyaV.js   [39m[1m[2m311.17 kB[22m[1m[22m[2m │ gzip:  97.66 kB[22m
+[32m✓ built in 1.89s[39m
+
+  [37mdist/[0m[1mindex.js[0m  [36m8.0kb[0m
+
+⚡ [32mDone in 7ms[0m

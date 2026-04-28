@@ -2,7 +2,7 @@ import { QueryClient } from "@tanstack/react-query";
 
 /**
  * Global QueryClient instance for React Query
- * Configured with standard defaults for the Signal Flow Lab
+ * Configured with standard defaults for the Lab hub
  */
 export const queryClient = new QueryClient({
   defaultOptions: {

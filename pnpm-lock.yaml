@@ -4,6 +4,14 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  tailwindcss>nanoid: 3.3.7
+
+patchedDependencies:
+  wouter@3.9.0:
+    hash: 93cdaa4d5c5c24fbed307df55cba3ae783f79523ad0d9731fd670b73379c466e
+    path: patches/wouter@3.9.0.patch
+
 importers:
 
   .:
@@ -101,6 +109,15 @@ importers:
       '@radix-ui/react-tooltip':
         specifier: ^1.2.8
         version: 1.2.8(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      '@rs/constants':
+        specifier: workspace:*
+        version: link:../../packages/constants
+      '@rs/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      '@rs/utils':
+        specifier: workspace:*
+        version: link:../../packages/utils
       '@tanstack/react-query':
         specifier: ^5.90.2
         version: 5.99.2(react@19.2.5)
@@ -208,7 +225,7 @@ importers:
         version: 1.1.2(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       wouter:
         specifier: ^3.3.5
-        version: 3.9.0(react@19.2.5)
+        version: 3.9.0(patch_hash=93cdaa4d5c5c24fbed307df55cba3ae783f79523ad0d9731fd670b73379c466e)(react@19.2.5)
       zod:
         specifier: ^4.1.12
         version: 4.3.6
@@ -282,6 +299,189 @@ importers:
       vitest:
         specifier: ^2.1.4
         version: 2.1.9(@types/node@24.12.2)(lightningcss@1.32.0)
+
+  apps/the-lab-hub:
+    dependencies:
+      '@radix-ui/react-dialog':
+        specifier: ^1.1.15
+        version: 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      '@radix-ui/react-slot':
+        specifier: ^1.2.3
+        version: 1.2.4(@types/react@19.2.14)(react@19.2.5)
+      '@rs/constants':
+        specifier: workspace:*
+        version: link:../../packages/constants
+      '@rs/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      '@rs/utils':
+        specifier: workspace:*
+        version: link:../../packages/utils
+      '@tanstack/react-query':
+        specifier: ^5.90.2
+        version: 5.99.2(react@19.2.5)
+      '@trpc/client':
+        specifier: ^11.6.0
+        version: 11.16.0(@trpc/server@11.16.0(typescript@5.9.3))(typescript@5.9.3)
+      '@trpc/react-query':
+        specifier: ^11.6.0
+        version: 11.16.0(@tanstack/react-query@5.99.2(react@19.2.5))(@trpc/client@11.16.0(@trpc/server@11.16.0(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.16.0(typescript@5.9.3))(react@19.2.5)(typescript@5.9.3)
+      '@trpc/server':
+        specifier: ^11.6.0
+        version: 11.16.0(typescript@5.9.3)
+      axios:
+        specifier: ^1.12.0
+        version: 1.15.1
+      class-variance-authority:
+        specifier: ^0.7.1
+        version: 0.7.1
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
+      dotenv:
+        specifier: ^17.2.2
+        version: 17.4.2
+      express:
+        specifier: ^4.21.2
+        version: 4.22.1
+      jose:
+        specifier: 6.1.0
+        version: 6.1.0
+      lucide-react:
+        specifier: ^0.453.0
+        version: 0.453.0(react@19.2.5)
+      nanoid:
+        specifier: ^5.1.5
+        version: 5.1.9
+      react:
+        specifier: ^19.2.1
+        version: 19.2.5
+      react-dom:
+        specifier: ^19.2.1
+        version: 19.2.5(react@19.2.5)
+      sonner:
+        specifier: ^2.0.7
+        version: 2.0.7(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      superjson:
+        specifier: ^1.13.3
+        version: 1.13.3
+      tailwind-merge:
+        specifier: ^3.3.1
+        version: 3.5.0
+      tailwindcss-animate:
+        specifier: ^1.0.7
+        version: 1.0.7(tailwindcss@4.2.2)
+      wouter:
+        specifier: ^3.3.5
+        version: 3.9.0(patch_hash=93cdaa4d5c5c24fbed307df55cba3ae783f79523ad0d9731fd670b73379c466e)(react@19.2.5)
+      zod:
+        specifier: ^4.1.12
+        version: 4.3.6
+    devDependencies:
+      '@builder.io/vite-plugin-jsx-loc':
+        specifier: ^0.1.1
+        version: 0.1.1(vite@7.3.2(@types/node@24.12.2)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0))
+      '@tailwindcss/typography':
+        specifier: ^0.5.15
+        version: 0.5.19(tailwindcss@4.2.2)
+      '@tailwindcss/vite':
+        specifier: ^4.1.3
+        version: 4.2.2(vite@7.3.2(@types/node@24.12.2)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0))
+      '@types/express':
+        specifier: 4.17.21
+        version: 4.17.21
+      '@types/node':
+        specifier: ^24.7.0
+        version: 24.12.2
+      '@types/react':
+        specifier: ^19.2.1
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.2.1
+        version: 19.2.3(@types/react@19.2.14)
+      '@vitejs/plugin-react':
+        specifier: ^5.0.4
+        version: 5.2.0(vite@7.3.2(@types/node@24.12.2)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0))
+      autoprefixer:
+        specifier: ^10.4.20
+        version: 10.5.0(postcss@8.5.10)
+      esbuild:
+        specifier: ^0.25.0
+        version: 0.25.12
+      postcss:
+        specifier: ^8.4.47
+        version: 8.5.10
+      prettier:
+        specifier: ^3.6.2
+        version: 3.8.3
+      tailwindcss:
+        specifier: ^4.1.14
+        version: 4.2.2
+      tsx:
+        specifier: ^4.19.1
+        version: 4.21.0
+      tw-animate-css:
+        specifier: ^1.4.0
+        version: 1.4.0
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+      vite:
+        specifier: ^7.1.7
+        version: 7.3.2(@types/node@24.12.2)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0)
+      vite-plugin-manus-runtime:
+        specifier: ^0.0.57
+        version: 0.0.57
+      vitest:
+        specifier: ^2.1.4
+        version: 2.1.9(@types/node@24.12.2)(lightningcss@1.32.0)
+
+  packages/constants:
+    devDependencies:
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
+  packages/ui:
+    dependencies:
+      '@radix-ui/react-slot':
+        specifier: ^1.2.3
+        version: 1.2.4(@types/react@19.2.14)(react@19.2.5)
+      '@rs/utils':
+        specifier: workspace:*
+        version: link:../utils
+      class-variance-authority:
+        specifier: ^0.7.1
+        version: 0.7.1
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
+      react:
+        specifier: ^19.2.1
+        version: 19.2.5
+      tailwind-merge:
+        specifier: ^3.3.1
+        version: 3.5.0
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.1
+        version: 19.2.14
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
+  packages/utils:
+    dependencies:
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
+      tailwind-merge:
+        specifier: ^3.3.1
+        version: 3.5.0
+    devDependencies:
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
 
 packages:
 
@@ -9472,7 +9672,7 @@ snapshots:
       siginfo: 2.0.0
       stackback: 0.0.2
 
-  wouter@3.9.0(react@19.2.5):
+  wouter@3.9.0(patch_hash=93cdaa4d5c5c24fbed307df55cba3ae783f79523ad0d9731fd670b73379c466e)(react@19.2.5):
     dependencies:
       mitt: 3.0.1
       react: 19.2.5

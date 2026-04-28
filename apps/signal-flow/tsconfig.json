@@ -19,5 +19,10 @@
       "@/*": ["./client/src/*"],
       "@shared/*": ["./shared/*"]
     }
-  }
+  },
+  "references": [
+    { "path": "../../packages/constants" },
+    { "path": "../../packages/ui" },
+    { "path": "../../packages/utils" }
+  ]
 }

@@ -1,7 +1,7 @@
 import React from 'react';
 import type { ScenarioDef } from '@/lib/scenarios';
 import { CheckCircle2, Circle, Lightbulb, ChevronRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@rs/ui';
 
 interface Props {
   scenario: ScenarioDef;

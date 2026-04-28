@@ -16,7 +16,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { Button } from "@/components/ui/button";
+import { Button } from "@rs/ui";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Card,

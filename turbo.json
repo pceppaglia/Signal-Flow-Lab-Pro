@@ -1,7 +1,6 @@
-// turbo.json
 {
   "$schema": "https://turbo.build/schema.json",
-  "pipeline": {
+  "tasks": {
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**", ".next/**", "!**/.next/cache/**"]
@@ -16,12 +15,20 @@
     "vocal:dev": {
       "cache": false,
       "persistent": true,
-      "dependsOn": ["@rs/the-lab-hub#dev"]
+      "dependsOn": [
+        "@rs/constants#build",
+        "@rs/utils#build",
+        "@rs/ui#build"
+      ]
     },
     "signal:dev": {
       "cache": false,
       "persistent": true,
-      "dependsOn": ["@rs/signal-flow#dev"]
+      "dependsOn": [
+        "@rs/constants#build",
+        "@rs/utils#build",
+        "@rs/ui#build"
+      ]
     }
   }
 }

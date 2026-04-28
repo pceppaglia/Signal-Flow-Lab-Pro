@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Button } from '@rs/ui';
 import { Slider } from '@/components/ui/slider';
 import { Plus, Trash2 } from 'lucide-react';
 

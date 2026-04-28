@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { getLoginUrl } from '@/const';
-import { Button } from '@/components/ui/button';
+import { Button } from '@rs/ui';
 import { toast } from 'sonner';
 import { Save, FolderOpen, Trash2, Share2, Lock, Globe, Loader2 } from 'lucide-react';
 import type { WorkspaceState } from '../../../shared/equipment-types';

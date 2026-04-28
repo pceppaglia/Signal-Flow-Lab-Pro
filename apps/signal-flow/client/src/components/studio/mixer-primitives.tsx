@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
-import { cn } from '@/lib/utils';
+import { cn } from '@rs/utils';
 
 /** Normalized fader value (0–1) that aligns the cap with the printed “0” unity mark. */
 export const MIXER_FADER_UNITY_VALUE = 2 / 3;

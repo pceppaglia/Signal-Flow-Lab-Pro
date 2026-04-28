@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp, Headphones, VolumeX } from 'lucide-react';
 import { audioEngine } from '@/lib/audio-engine-v2';
 import type { MixerRoute } from '@/lib/foundational-mixer-graph';
-import { cn } from '@/lib/utils';
+import { cn } from '@rs/utils';
 import {
   BusCompNeedle,
   GlowBtn,

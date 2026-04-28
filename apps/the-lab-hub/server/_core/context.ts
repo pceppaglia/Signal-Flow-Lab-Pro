@@ -1,10 +1,9 @@
-// apps/the-lab-hub/server/_core/context.ts
-import type { ExpressContext } from "@trpc/server/adapters/express";
+import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 
 export type TrpcContext = {
   // Add any shared context here if needed for the hub
 };
 
-export function createContext(opts: ExpressContext): TrpcContext {
+export function createContext(_opts: CreateExpressContextOptions): TrpcContext {
   return {};
 }

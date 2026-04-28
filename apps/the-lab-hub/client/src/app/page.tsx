@@ -1,8 +1,7 @@
-// apps/the-lab-hub/client/src/app/page.tsx
 import { BrandLabLockup } from '@/components/BrandLabLockup';
 import { LegalDisclaimerDialog } from '@/components/LegalDisclaimerDialog';
-import { Button } from '@rs/ui'; // Updated import
-import { cn } from '@rs/utils'; // Will be created later
+import { Button } from '@rs/ui';
+import { cn } from '@rs/utils';
 import { AudioWaveform, Headphones, Radio, Zap } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useState } from 'react';

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Headphones, VolumeX } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '@rs/utils';
 import { GlowBtn, HiFiKnob, LedMeter, LongThrowFader } from './mixer-primitives';
 
 export interface SubgroupStripProps {

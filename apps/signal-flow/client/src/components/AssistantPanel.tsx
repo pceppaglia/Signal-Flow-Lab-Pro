@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { getLoginUrl } from '@/const';
-import { Button } from '@/components/ui/button';
+import { Button } from '@rs/ui';
 import { Send, Bot, User, Loader2, Zap, MessageSquare } from 'lucide-react';
 import { Streamdown } from 'streamdown';
 import type { EquipmentNode, Cable } from '../../../shared/equipment-types';

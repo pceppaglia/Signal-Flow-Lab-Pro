@@ -1,12 +1,8 @@
-// apps/the-lab-hub/client/src/App.tsx
-// apps/the-lab-hub/client/src/App.tsx
-import React from 'react';
 import { Switch, Route } from 'wouter';
 import { Toaster } from 'sonner';
 import LabEntrancePage from '@/app/page';
 import VocalMatchmakerPage from '@/app/vocal-matchmaker/page';
 import NotFound from '@/pages/NotFound';
-import { cn } from '@rs/utils'; // Updated import
 
 function Router() {
   return (

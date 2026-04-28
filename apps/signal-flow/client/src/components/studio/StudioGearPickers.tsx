@@ -16,7 +16,7 @@ import {
   type UiStageTab,
 } from '@/lib/equipment-library';
 import EquipmentMiniPreview from './EquipmentMiniPreview';
-import { cn } from '@/lib/utils';
+import { cn } from '@rs/utils';
 
 const DEF_MIME = 'application/signal-flow-def-id';
 

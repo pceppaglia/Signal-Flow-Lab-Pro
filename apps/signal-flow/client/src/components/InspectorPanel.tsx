@@ -4,7 +4,7 @@ import type { EquipmentDef } from '@/lib/equipment-library';
 import { getTheoryForEquipment } from '@/lib/equipment-theory';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Info, Trash2, BookOpen } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@rs/ui';
 import SafetyWarnings from './SafetyWarnings';
 
 type ControlDef = EquipmentDef['controls'][number];

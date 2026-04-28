@@ -1,7 +1,5 @@
-// apps/the-lab-hub/client/src/pages/NotFound.tsx
-import React from 'react';
+import { Button } from '@rs/ui';
 import { Link } from 'wouter';
-import { Button } from '@/components/ui/button';
 
 export default function NotFound() {
   return (
